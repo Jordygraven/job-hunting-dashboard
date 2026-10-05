@@ -1,4 +1,17 @@
 import { fetchLinkedInAlerts } from "@/lib/gmail/fetchLinkedInAlerts";
+import { fetchMessageContent } from "@/lib/gmail/fetchMessageContent";
+import { parseLinkedInAlert } from "@/lib/parsers/linkedin";
+import { toVacancyRows, uniqueVacancyRows, type VacancyRow } from "@/lib/sync/vacancyRows";
+import { getSupabaseServerClient } from "@/lib/supabase/server";
+
+interface SyncFailure {
+  messageId: string;
+  reason: string;
+}
+
+function reasonFor(error: unknown): string {
+  return error instanceof Error ? error.message : "unknown error";
+}
 
 export async function GET(request: Request) {
   const cronSecret = process.env.CRON_SECRET;
@@ -8,7 +21,66 @@ export async function GET(request: Request) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const messages = await fetchLinkedInAlerts();
+  const alerts = await fetchLinkedInAlerts();
+  const failures: SyncFailure[] = [];
 
-  return Response.json({ count: messages.length, messages });
+  const fetched = await Promise.allSettled(
+    alerts.map((alert) => fetchMessageContent(alert.id))
+  );
+
+  const contents: { id: string; internalDate: number; text: string }[] = [];
+  for (let i = 0; i < fetched.length; i++) {
+    const result = fetched[i];
+    if (result.status === "fulfilled") {
+      contents.push({
+        id: result.value.id,
+        internalDate: Number(result.value.internalDate),
+        text: result.value.text,
+      });
+    } else {
+      failures.push({ messageId: alerts[i].id, reason: reasonFor(result.reason) });
+    }
+  }
+
+  contents.sort((a, b) => a.internalDate - b.internalDate);
+
+  let warnings = 0;
+  const allRows: VacancyRow[] = [];
+
+  for (const message of contents) {
+    try {
+      const { cards, warnings: cardWarnings } = parseLinkedInAlert(message.text);
+      warnings += cardWarnings.length;
+      allRows.push(...toVacancyRows(cards, message.id, new Date(message.internalDate)));
+    } catch (error) {
+      failures.push({ messageId: message.id, reason: reasonFor(error) });
+    }
+  }
+
+  const uniqueRows = uniqueVacancyRows(allRows);
+
+  let inserted = 0;
+  if (uniqueRows.length > 0) {
+    const supabase = getSupabaseServerClient();
+    const { data, error } = await supabase
+      .from("vacancies")
+      .upsert(uniqueRows, { onConflict: "source,source_job_id", ignoreDuplicates: true })
+      .select("id");
+
+    if (error) {
+      return Response.json({ error: "database error" }, { status: 500 });
+    }
+
+    inserted = data?.length ?? 0;
+  }
+
+  return Response.json({
+    messages: alerts.length,
+    cards: allRows.length,
+    unique: uniqueRows.length,
+    inserted,
+    skipped: uniqueRows.length - inserted,
+    warnings,
+    failures,
+  });
 }
