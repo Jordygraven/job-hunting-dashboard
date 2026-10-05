@@ -8,3 +8,4 @@ Next.js (App Router, TypeScript), Supabase, Vercel. Ingests LinkedIn job-alert e
 - Anything touching real data is tested on a Vercel Preview deploy before merging.
 - Build parsers only against real sample emails stored in the repo, never a guessed format.
 - Deferred ideas go in BACKLOG.md, not into the current task.
+- Claude Code reads only samples/linkedin-clean/, never the raw .eml files.
