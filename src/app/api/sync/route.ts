@@ -2,6 +2,7 @@ import { fetchLinkedInAlerts } from "@/lib/gmail/fetchLinkedInAlerts";
 import { fetchMessageContent } from "@/lib/gmail/fetchMessageContent";
 import { parseLinkedInAlert } from "@/lib/parsers/linkedin";
 import { toVacancyRows, uniqueVacancyRows, type VacancyRow } from "@/lib/sync/vacancyRows";
+import { toParserFailures, type ParserFailure } from "@/lib/sync/parserFailures";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 interface SyncFailure {
@@ -46,11 +47,15 @@ export async function GET(request: Request) {
 
   let warnings = 0;
   const allRows: VacancyRow[] = [];
+  const parserFailures: ParserFailure[] = [];
 
   for (const message of contents) {
     try {
-      const { cards, warnings: cardWarnings } = parseLinkedInAlert(message.text);
+      const { cards, warnings: cardWarnings, failures: cardFailures } = parseLinkedInAlert(
+        message.text
+      );
       warnings += cardWarnings.length;
+      parserFailures.push(...toParserFailures(message.id, cardFailures));
       allRows.push(...toVacancyRows(cards, message.id, new Date(message.internalDate)));
     } catch (error) {
       failures.push({ messageId: message.id, reason: reasonFor(error) });
@@ -81,6 +86,8 @@ export async function GET(request: Request) {
     inserted,
     skipped: uniqueRows.length - inserted,
     warnings,
+    parserFailureCount: parserFailures.length,
+    parserFailures,
     failures,
   });
 }
