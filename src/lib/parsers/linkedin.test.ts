@@ -171,6 +171,49 @@ Vacature weergeven: https://www.linkedin.com/comm/jobs/view/1000000007/?[strippe
     noUrls(warnings[0].snippet);
   });
 
+  test('treats a bare production tracking link (not the "[link]" placeholder) as junk, not card content', () => {
+    const text = `Subject: Widget Engineer bij Acme
+
+Zoek slimmer naar een baan met Premium
+https://www.linkedin.com/premium/some-real-tracking-url?trk=abc123
+Widget Engineer
+Acme
+Remote
+Vacature weergeven: https://www.linkedin.com/comm/jobs/view/1000000009/?[stripped]
+`;
+    const { cards, failures, warnings } = parseLinkedInAlert(text);
+
+    expect(failures).toEqual([]);
+    expect(warnings).toEqual([]);
+    expect(cards).toEqual([
+      {
+        jobId: '1000000009',
+        title: 'Widget Engineer',
+        company: 'Acme',
+        location: 'Remote',
+        url: 'https://www.linkedin.com/jobs/view/1000000009/',
+      },
+    ]);
+  });
+
+  test('does not let promo text leak into the title when it directly precedes a card with no separator', () => {
+    const text = `Subject: Widget Engineer bij Acme
+
+Zoek slimmer naar een baan met Premium
+[link]
+Widget Engineer
+Acme
+Remote
+Vacature weergeven: https://www.linkedin.com/comm/jobs/view/1000000010/?[stripped]
+`;
+    const { cards, failures, warnings } = parseLinkedInAlert(text);
+
+    expect(failures).toEqual([]);
+    expect(warnings).toEqual([]);
+    expect(cards[0].title).toBe('Widget Engineer');
+    expect(cards[0].company).toBe('Acme');
+  });
+
   test('recognizes known badge lines without warning', () => {
     const text = `Subject: Widget Engineer bij Acme
 

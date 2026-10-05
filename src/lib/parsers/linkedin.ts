@@ -41,9 +41,16 @@ const JUNK_EXACT = new Set([
   'Een nieuwe vacature komt overeen met uw voorkeuren.',
   'Nieuwe vacatures uit uw andere meldingen',
   'Val op en laat wervingspersoneel weten wanneer een functie die ze hebben geplaatst uw eerste keuze is.',
+  'Zoek slimmer naar een baan met Premium',
   'U ontvangt e-mails met vacaturemeldingen.',
-  '[link]',
 ]);
+
+// A line that is nothing but a link is never card content: in the clean
+// samples it's the "[link]" redaction placeholder, in production it will be
+// a bare tracking URL on its own line (e.g. under the premium promo text).
+// Title/company/location are never a bare URL, so either form is safe to
+// treat as a reset rather than card content.
+const BARE_LINK_RE = /^(\[link\]|https?:\/\/\S+)$/;
 
 const JUNK_PREFIXES = [
   'Subject:',
@@ -64,6 +71,7 @@ function isJunkLine(trimmed: string): boolean {
   return (
     SEPARATOR_RE.test(trimmed) ||
     trimmed.includes('<strong') ||
+    BARE_LINK_RE.test(trimmed) ||
     JUNK_EXACT.has(trimmed) ||
     JUNK_PREFIXES.some((prefix) => trimmed.startsWith(prefix))
   );
