@@ -27,7 +27,7 @@ const gmail = google.gmail({ version: "v1", auth: oauth2Client });
 const { data } = await gmail.users.messages.list({
   userId: "me",
   q: "from:jobalerts-noreply@linkedin.com",
-  maxResults: 3,
+  maxResults: 15,
 });
 
 const messages = data.messages ?? [];
