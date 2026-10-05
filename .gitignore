@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# local email samples (contain personal data from a real inbox)
+/samples/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
