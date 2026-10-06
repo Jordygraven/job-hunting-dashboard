@@ -7,13 +7,13 @@ export async function getVacancyStatuses(): Promise<Map<number, VacancyStatus>> 
   const { data, error } = await supabase
     .from("vacancy_actions")
     .select("id, vacancy_id, action, ignore_reason, applied_on, created_at")
-    .order("id", { ascending: true });
+    .order("id", { ascending: false });
 
   if (error) {
     throw new Error(error.message);
   }
 
-  const rowsByVacancyId = new Map<number, VacancyActionRow[]>();
+  const latestRowByVacancyId = new Map<number, VacancyActionRow>();
   for (const row of data ?? []) {
     const mapped: VacancyActionRow = {
       id: row.id,
@@ -23,14 +23,15 @@ export async function getVacancyStatuses(): Promise<Map<number, VacancyStatus>> 
       appliedOn: row.applied_on,
       createdAt: row.created_at,
     };
-    const group = rowsByVacancyId.get(mapped.vacancyId) ?? [];
-    group.push(mapped);
-    rowsByVacancyId.set(mapped.vacancyId, group);
+    // Rows arrive highest id first, so the first row seen for a vacancy is its latest.
+    if (!latestRowByVacancyId.has(mapped.vacancyId)) {
+      latestRowByVacancyId.set(mapped.vacancyId, mapped);
+    }
   }
 
   const statuses = new Map<number, VacancyStatus>();
-  for (const [vacancyId, rows] of rowsByVacancyId) {
-    statuses.set(vacancyId, deriveVacancyStatus(rows));
+  for (const [vacancyId, latestRow] of latestRowByVacancyId) {
+    statuses.set(vacancyId, deriveVacancyStatus([latestRow]));
   }
   return statuses;
 }
