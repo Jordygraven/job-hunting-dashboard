@@ -11,15 +11,11 @@ type ActionState =
   | { status: "error"; message: string };
 
 async function syncAction(_prevState: ActionState): Promise<ActionState> {
-  try {
-    const result = await runManualSync();
-    return { status: "ok", result };
-  } catch (error) {
-    return {
-      status: "error",
-      message: error instanceof Error ? error.message : "unknown error",
-    };
+  const response = await runManualSync();
+  if (response.ok) {
+    return { status: "ok", result: response.result };
   }
+  return { status: "error", message: response.message };
 }
 
 export function SyncButton() {
