@@ -52,7 +52,14 @@ export default async function Home() {
             </div>
           )}
 
-          {latestRun && (
+          {latestRun && latestRun.status === "error" && (
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              Finished {formatKlDateTime(latestRun.finishedAt)} ({latestRun.trigger}) — sync
+              failed, see above.
+            </p>
+          )}
+
+          {latestRun && latestRun.status === "ok" && (
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
               Finished {formatKlDateTime(latestRun.finishedAt)} ({latestRun.trigger}) —{" "}
               {latestRun.messages ?? 0} messages, {latestRun.cards ?? 0} cards,{" "}
