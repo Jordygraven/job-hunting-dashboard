@@ -1,3 +1,5 @@
+import "server-only";
+
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { deriveVacancyStatus } from "./deriveVacancyStatus";
 import type { VacancyActionRow, VacancyStatus } from "./types";

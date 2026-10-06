@@ -79,4 +79,9 @@ describe("deriveVacancyStatus", () => {
       date: "2026-10-01",
     });
   });
+
+  test("throws if the latest applied row has no appliedOn (a corrupt/impossible row)", () => {
+    const rows = [row({ id: 1, action: "applied", appliedOn: null })];
+    expect(() => deriveVacancyStatus(rows)).toThrow(/appliedOn/i);
+  });
 });

@@ -62,6 +62,13 @@ describe("undo", () => {
     expect(result).toEqual({ ok: true });
     expect(revalidatePathMock).toHaveBeenCalledWith("/");
   });
+
+  test("does not revalidate on failure", async () => {
+    writeVacancyActionMock.mockResolvedValue({ ok: false, error: "Nothing to undo." });
+    const result = await undo(3);
+    expect(result).toEqual({ ok: false, error: "Nothing to undo." });
+    expect(revalidatePathMock).not.toHaveBeenCalled();
+  });
 });
 
 describe("editAppliedDate", () => {
@@ -75,6 +82,13 @@ describe("editAppliedDate", () => {
     });
     expect(result).toEqual({ ok: true });
     expect(revalidatePathMock).toHaveBeenCalledWith("/");
+  });
+
+  test("does not revalidate on failure", async () => {
+    writeVacancyActionMock.mockResolvedValue({ ok: false, error: "Invalid date." });
+    const result = await editAppliedDate(4, "not-a-date");
+    expect(result).toEqual({ ok: false, error: "Invalid date." });
+    expect(revalidatePathMock).not.toHaveBeenCalled();
   });
 });
 

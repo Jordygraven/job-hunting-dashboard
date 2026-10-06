@@ -13,7 +13,10 @@ export function deriveVacancyStatus(rows: VacancyActionRow[]): VacancyStatus {
   }
 
   if (latest.action === "applied") {
-    return { status: "applied", appliedOn: latest.appliedOn as string };
+    if (typeof latest.appliedOn !== "string") {
+      throw new Error(`Applied action row ${latest.id} is missing appliedOn`);
+    }
+    return { status: "applied", appliedOn: latest.appliedOn };
   }
 
   return {
