@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { isValidAppliedOnDate, isValidIgnoreReason, isValidVacancyId } from "./validation";
+import { IGNORE_REASONS, isValidAppliedOnDate, isValidIgnoreReason, isValidVacancyId } from "./validation";
 
 describe("isValidVacancyId", () => {
   test("accepts a positive integer", () => {
@@ -50,5 +50,11 @@ describe("isValidAppliedOnDate", () => {
   test("rejects a date in the future in KL", () => {
     const now = new Date("2026-10-05T20:00:00.000Z"); // already 2026-10-06 in KL
     expect(isValidAppliedOnDate("2026-10-07", now)).toBe(false);
+  });
+});
+
+describe("IGNORE_REASONS", () => {
+  test("exports exactly the four allowed reasons", () => {
+    expect(IGNORE_REASONS).toEqual(["language", "location", "seniority", "other"]);
   });
 });

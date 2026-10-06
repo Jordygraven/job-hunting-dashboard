@@ -1,20 +1,32 @@
+import "server-only";
+
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { fetchAllRows } from "@/lib/supabase/fetchAllRows";
 import { deriveVacancyStatus } from "./deriveVacancyStatus";
 import type { VacancyActionRow, VacancyStatus } from "./types";
 
+type VacancyActionDbRow = {
+  id: number;
+  vacancy_id: number;
+  action: "applied" | "ignored" | "reset";
+  ignore_reason: VacancyActionRow["ignoreReason"];
+  applied_on: string | null;
+  created_at: string;
+};
+
 export async function getVacancyStatuses(): Promise<Map<number, VacancyStatus>> {
   const supabase = getSupabaseServerClient();
-  const { data, error } = await supabase
-    .from("vacancy_actions")
-    .select("id, vacancy_id, action, ignore_reason, applied_on, created_at")
-    .order("id", { ascending: false });
 
-  if (error) {
-    throw new Error(error.message);
-  }
+  const rows = await fetchAllRows<VacancyActionDbRow>(async (from, to) =>
+    supabase
+      .from("vacancy_actions")
+      .select("id, vacancy_id, action, ignore_reason, applied_on, created_at")
+      .order("id", { ascending: false })
+      .range(from, to)
+  );
 
   const latestRowByVacancyId = new Map<number, VacancyActionRow>();
-  for (const row of data ?? []) {
+  for (const row of rows) {
     const mapped: VacancyActionRow = {
       id: row.id,
       vacancyId: row.vacancy_id,

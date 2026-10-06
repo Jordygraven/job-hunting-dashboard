@@ -1,3 +1,5 @@
+import "server-only";
+
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { getKlDateString } from "@/lib/format/kualaLumpurDate";
 import { deriveVacancyStatus } from "./deriveVacancyStatus";
@@ -29,7 +31,12 @@ export async function writeVacancyAction(
     return { ok: false, error: "Invalid date." };
   }
 
-  const supabase = getSupabaseServerClient();
+  let supabase;
+  try {
+    supabase = getSupabaseServerClient();
+  } catch {
+    return { ok: false, error: SAFE_DB_ERROR };
+  }
 
   const { data: vacancy, error: vacancyError } = await supabase
     .from("vacancies")
