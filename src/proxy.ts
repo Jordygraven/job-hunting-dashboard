@@ -13,6 +13,6 @@ export function proxy(request: NextRequest) {
   });
 }
 
-export const proxyConfig = {
-  matcher: ["/((?!api/sync|_next/static|_next/image|favicon.ico).*)"],
+export const config = {
+  matcher: ["/((?!api/sync(?:/|$)|_next/static|_next/image|favicon.ico).*)"],
 };
