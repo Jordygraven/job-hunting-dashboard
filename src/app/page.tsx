@@ -3,6 +3,7 @@ import { getVacancies } from "@/lib/vacancies/getVacancies";
 import { getLatestSyncRun } from "@/lib/sync/getLatestSyncRun";
 import { getSyncAlert, type AlertReason } from "@/lib/sync/getSyncAlert";
 import { formatKlDate, formatKlDateTime } from "@/lib/format/kualaLumpurTime";
+import { SyncButton } from "./SyncButton";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,10 @@ export default async function Home() {
           <h2 className="text-lg font-semibold mb-2 text-black dark:text-zinc-50">
             Sync status
           </h2>
+
+          <div className="mb-3">
+            <SyncButton />
+          </div>
 
           {alerts.length > 0 && (
             <div className="mb-3 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
