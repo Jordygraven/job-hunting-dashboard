@@ -82,10 +82,11 @@ async function recordSyncRun(args: {
 
 export async function runSync(trigger: SyncTrigger): Promise<SyncResult> {
   const startedAt = new Date();
+  const failures: SyncFailure[] = [];
+  const parserFailures: ParserFailure[] = [];
 
   try {
     const alerts = await fetchLinkedInAlerts();
-    const failures: SyncFailure[] = [];
 
     const fetched = await Promise.allSettled(
       alerts.map((alert) => fetchMessageContent(alert.id))
@@ -109,7 +110,6 @@ export async function runSync(trigger: SyncTrigger): Promise<SyncResult> {
 
     let warnings = 0;
     const allRows: VacancyRow[] = [];
-    const parserFailures: ParserFailure[] = [];
 
     for (const message of contents) {
       try {
@@ -181,8 +181,8 @@ export async function runSync(trigger: SyncTrigger): Promise<SyncResult> {
       finishedAt: new Date(),
       status: "error",
       counts: null,
-      parserFailures: [],
-      failures: [],
+      parserFailures,
+      failures,
       error: reasonFor(error),
     });
 

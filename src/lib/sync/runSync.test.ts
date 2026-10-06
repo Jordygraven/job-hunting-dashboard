@@ -142,6 +142,46 @@ describe("runSync database upsert failure", () => {
   });
 });
 
+describe("runSync crash after partial message failures", () => {
+  test("error row holds the failures collected before the crash plus the crash error", async () => {
+    fromMock.mockImplementation((table: string) =>
+      table === "vacancies"
+        ? upsertTable({ data: null, error: { message: "duplicate key" } })
+        : syncRunsTable()
+    );
+    fetchLinkedInAlertsMock.mockResolvedValue([
+      { id: "m1", threadId: "t1", date: "", subject: "" },
+      { id: "m2", threadId: "t2", date: "", subject: "" },
+      { id: "m3", threadId: "t3", date: "", subject: "" },
+    ]);
+    fetchMessageContentMock.mockImplementation((id: string) => {
+      if (id === "m1") return Promise.reject(new Error("fetch timeout"));
+      if (id === "m2") return Promise.reject(new Error("message not found"));
+      return Promise.resolve({ id: "m3", internalDate: "1000", text: "body" });
+    });
+    parseLinkedInAlertMock.mockReturnValue({
+      cards: [{ jobId: "1", title: "Widget Engineer", company: "Acme", location: "Remote", url: "https://x" }],
+      warnings: [],
+      failures: [],
+    });
+
+    await expect(runSync("cron")).rejects.toBeInstanceOf(SyncDatabaseError);
+
+    expect(insertMock).toHaveBeenCalledTimes(1);
+    const row = insertMock.mock.calls[0][0];
+    expect(row).toMatchObject({
+      status: "error",
+      messages: null,
+      error: "duplicate key",
+      parser_failures: [],
+      failures: [
+        { messageId: "m1", reason: "fetch timeout" },
+        { messageId: "m2", reason: "message not found" },
+      ],
+    });
+  });
+});
+
 describe("runSync when the sync_runs insert itself fails", () => {
   test("logs the error but still returns the sync result", async () => {
     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});

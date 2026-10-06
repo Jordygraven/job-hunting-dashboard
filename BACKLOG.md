@@ -8,7 +8,6 @@
 
 ## Epic 3 (dashboard) deferred Minor findings — 6 Oct
 
-- Task 1 (runSync): crash branch discards partial per-message failures accumulated before a later crash in the same run — `src/lib/sync/runSync.ts`.
 - Task 1 (runSync): `reasonFor()`'s plain-object branch uses an `as any` cast instead of a narrower type guard — `src/lib/sync/runSync.ts`.
 - Task 1 (runSync): no test for "some individual messages fail, overall run still succeeds" — `src/lib/sync/runSync.test.ts`.
 - Task 2 (Basic Auth): the `Basic ` scheme check is case-sensitive, though RFC 7235 scheme names aren't — `src/lib/auth/basicAuth.ts`.
