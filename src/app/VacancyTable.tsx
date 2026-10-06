@@ -1,6 +1,7 @@
 import { formatKlDate } from "@/lib/format/kualaLumpurTime";
 import type { VacancyTabRow, VacancyTabView } from "@/lib/vacancyActions/vacancyTabs";
 import type { IgnoreReason } from "@/lib/vacancyActions/types";
+import { VacancyActions } from "./VacancyActions";
 
 const REASON_LABELS: Record<IgnoreReason, string> = {
   language: "Language",
@@ -70,7 +71,9 @@ export function VacancyTable({ view, rows }: { view: VacancyTabView; rows: Vacan
               </>
             )}
             {view === "all" && <td className="py-2 pr-4 capitalize">{row.status}</td>}
-            <td className="py-2 pr-4" />
+            <td className="py-2 pr-4">
+              <VacancyActions vacancyId={row.id} status={row.status} />
+            </td>
           </tr>
         ))}
       </tbody>
