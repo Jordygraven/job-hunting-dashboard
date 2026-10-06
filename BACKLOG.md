@@ -11,7 +11,6 @@
 - Task 1 (runSync): `reasonFor()`'s plain-object branch uses an `as any` cast instead of a narrower type guard — `src/lib/sync/runSync.ts`.
 - Task 1 (runSync): no test for "some individual messages fail, overall run still succeeds" — `src/lib/sync/runSync.test.ts`.
 - Task 2 (Basic Auth): the `Basic ` scheme check is case-sensitive, though RFC 7235 scheme names aren't — `src/lib/auth/basicAuth.ts`.
-- Task 3 (vacancy list): no automated test for `getVacancies()` (ordering, null-location passthrough, snake_case→camelCase mapping) — `src/lib/vacancies/getVacancies.ts`.
 - Task 3 (vacancy list): table headers have no `scope="col"` — `src/app/page.tsx`.
 - Task 3 (vacancy list): no test exercises the null-location/empty-list UI rendering paths — `src/app/page.tsx`.
 - Task 4 (sync status/alert): no test at the exact 26-hour stale boundary (only a 27h "clearly stale" case) — `src/lib/sync/getSyncAlert.test.ts`.
