@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 let writeVacancyActionMock: any;
 let revalidatePathMock: any;
+let runSyncMock: any;
 
 vi.mock("@/lib/vacancyActions/writeVacancyAction", () => ({
   writeVacancyAction: (...args: any[]) => writeVacancyActionMock(...args),
@@ -9,12 +10,16 @@ vi.mock("@/lib/vacancyActions/writeVacancyAction", () => ({
 vi.mock("next/cache", () => ({
   revalidatePath: (...args: any[]) => revalidatePathMock(...args),
 }));
+vi.mock("@/lib/sync/runSync", () => ({
+  runSync: (...args: any[]) => runSyncMock(...args),
+}));
 
-import { apply, editAppliedDate, ignore, undo } from "./actions";
+import { apply, editAppliedDate, ignore, runManualSync, undo } from "./actions";
 
 beforeEach(() => {
   writeVacancyActionMock = vi.fn();
   revalidatePathMock = vi.fn();
+  runSyncMock = vi.fn();
 });
 
 describe("apply", () => {
@@ -69,6 +74,38 @@ describe("editAppliedDate", () => {
       appliedOn: "2026-10-01",
     });
     expect(result).toEqual({ ok: true });
+    expect(revalidatePathMock).toHaveBeenCalledWith("/");
+  });
+});
+
+describe("runManualSync", () => {
+  test("calls runSync with 'manual' and returns its result on success", async () => {
+    const syncResult = {
+      messages: 1,
+      cards: 1,
+      unique: 1,
+      inserted: 1,
+      skipped: 0,
+      warnings: 0,
+      parserFailureCount: 0,
+      parserFailures: [],
+      failures: [],
+    };
+    runSyncMock.mockResolvedValue(syncResult);
+
+    const response = await runManualSync();
+
+    expect(runSyncMock).toHaveBeenCalledWith("manual");
+    expect(response).toEqual({ ok: true, result: syncResult });
+    expect(revalidatePathMock).toHaveBeenCalledWith("/");
+  });
+
+  test("returns a safe error message and still revalidates when runSync throws", async () => {
+    runSyncMock.mockRejectedValue(new Error("gmail unreachable"));
+
+    const response = await runManualSync();
+
+    expect(response).toEqual({ ok: false, message: "gmail unreachable" });
     expect(revalidatePathMock).toHaveBeenCalledWith("/");
   });
 });

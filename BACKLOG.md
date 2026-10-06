@@ -19,7 +19,6 @@
 - Task 4 (sync status/alert): the 26-hour threshold is duplicated as a magic number between the constant and a hardcoded UI string — `src/lib/sync/getSyncAlert.ts` / `src/app/page.tsx`.
 - Task 4 (sync status/alert): heading hierarchy has `<h2>Sync status</h2>` before `<h1>Vacancies</h1>` — `src/app/page.tsx`.
 - Task 4 (sync status/alert): `alerts.map(...)` uses the array index as the React key — `src/app/page.tsx`.
-- Task 5 (manual sync button): no automated test for the Server Action/button wiring itself (the underlying `runSync("manual")` is tested; the wiring isn't) — `src/app/actions.ts` / `src/app/SyncButton.tsx`.
 - Final review: `layout.tsx` still has the default create-next-app `title`/`description` metadata — `src/app/layout.tsx`.
 - Final review: a successful manual sync shows the same counts twice (button result + status panel) — `src/app/SyncButton.tsx` / `src/app/page.tsx`.
 - Final review: `SyncFailure` and `SyncRunFailure` are structurally identical `{messageId, reason}` types defined twice — `src/lib/sync/runSync.ts` / `src/lib/sync/syncRunRecord.ts`.
