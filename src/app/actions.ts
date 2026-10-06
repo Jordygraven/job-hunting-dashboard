@@ -3,6 +3,11 @@
 
 import { revalidatePath } from "next/cache";
 import { runSync, type SyncResult } from "@/lib/sync/runSync";
+import {
+  writeVacancyAction,
+  type WriteVacancyActionResult,
+} from "@/lib/vacancyActions/writeVacancyAction";
+import type { IgnoreReason } from "@/lib/vacancyActions/types";
 
 export async function runManualSync(): Promise<
   { ok: true; result: SyncResult } | { ok: false; message: string }
@@ -15,4 +20,42 @@ export async function runManualSync(): Promise<
   } finally {
     revalidatePath("/");
   }
+}
+
+export async function apply(vacancyId: number): Promise<WriteVacancyActionResult> {
+  const result = await writeVacancyAction({ intent: "apply", vacancyId });
+  if (result.ok) {
+    revalidatePath("/");
+  }
+  return result;
+}
+
+export async function ignore(
+  vacancyId: number,
+  reason?: IgnoreReason
+): Promise<WriteVacancyActionResult> {
+  const result = await writeVacancyAction({ intent: "ignore", vacancyId, reason });
+  if (result.ok) {
+    revalidatePath("/");
+  }
+  return result;
+}
+
+export async function undo(vacancyId: number): Promise<WriteVacancyActionResult> {
+  const result = await writeVacancyAction({ intent: "undo", vacancyId });
+  if (result.ok) {
+    revalidatePath("/");
+  }
+  return result;
+}
+
+export async function editAppliedDate(
+  vacancyId: number,
+  appliedOn: string
+): Promise<WriteVacancyActionResult> {
+  const result = await writeVacancyAction({ intent: "editAppliedDate", vacancyId, appliedOn });
+  if (result.ok) {
+    revalidatePath("/");
+  }
+  return result;
 }
