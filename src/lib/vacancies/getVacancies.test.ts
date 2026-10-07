@@ -11,10 +11,17 @@ import { SUPABASE_MAX_ROWS } from "@/lib/supabase/fetchAllRows";
 
 function vacanciesTable(pages: { data: unknown; error: unknown }[]) {
   let call = 0;
-  const rangeMock = vi.fn(() => Promise.resolve(pages[Math.min(call++, pages.length - 1)]));
-  const orderMock2 = vi.fn(() => ({ range: rangeMock }));
+  const orMock = vi.fn();
+  function builder(): any {
+    const b: any = { or: (...args: any[]) => { orMock(...args); return b; } };
+    b.then = (resolve: any, reject: any) =>
+      Promise.resolve(pages[Math.min(call++, pages.length - 1)]).then(resolve, reject);
+    return b;
+  }
+  const limitMock = vi.fn(() => builder());
+  const orderMock2 = vi.fn(() => ({ limit: limitMock }));
   const orderMock1 = vi.fn(() => ({ order: orderMock2 }));
-  return { table: { select: () => ({ order: orderMock1 }) }, rangeMock, orderMock1, orderMock2 };
+  return { table: { select: () => ({ order: orderMock1 }) }, limitMock, orderMock1, orderMock2, orMock };
 }
 
 beforeEach(() => {
@@ -30,6 +37,7 @@ describe("getVacancies", () => {
         ],
         error: null,
       },
+      { data: [], error: null },
     ]);
     fromMock.mockReturnValue(table);
 
@@ -62,18 +70,41 @@ describe("getVacancies", () => {
     const secondPage = [
       { id: SUPABASE_MAX_ROWS + 1, title: "Last job", company: "Acme", location: "Remote", url: "https://x/last", first_seen_at: "2026-09-30T00:00:00.000Z" },
     ];
-    const { table, rangeMock } = vacanciesTable([
+    const { table, limitMock, orMock } = vacanciesTable([
       { data: fullPage, error: null },
       { data: secondPage, error: null },
+      { data: [], error: null },
     ]);
     fromMock.mockReturnValue(table);
 
     const vacancies = await getVacancies();
 
     expect(vacancies).toHaveLength(SUPABASE_MAX_ROWS + 1);
-    expect(rangeMock).toHaveBeenCalledTimes(2);
-    expect(rangeMock).toHaveBeenNthCalledWith(1, 0, SUPABASE_MAX_ROWS - 1);
-    expect(rangeMock).toHaveBeenNthCalledWith(2, SUPABASE_MAX_ROWS, SUPABASE_MAX_ROWS * 2 - 1);
+    expect(limitMock).toHaveBeenCalledTimes(3);
+    expect(orMock).toHaveBeenCalledTimes(2);
+  });
+
+  test("pages by a cursor on the last row, not a numeric offset — so a row inserted between page requests can't be skipped or double-counted", async () => {
+    const fullPage = Array.from({ length: SUPABASE_MAX_ROWS }, (_, i) => ({
+      id: SUPABASE_MAX_ROWS - i,
+      title: `Job ${SUPABASE_MAX_ROWS - i}`,
+      company: "Acme",
+      location: "Remote",
+      url: `https://x/${SUPABASE_MAX_ROWS - i}`,
+      first_seen_at: "2026-10-01T00:00:00.000Z",
+    }));
+    const { table, orMock } = vacanciesTable([
+      { data: fullPage, error: null },
+      { data: [], error: null },
+    ]);
+    fromMock.mockReturnValue(table);
+
+    await getVacancies();
+
+    const lastRowOfPage1 = fullPage[fullPage.length - 1];
+    expect(orMock).toHaveBeenCalledWith(
+      `first_seen_at.lt.${lastRowOfPage1.first_seen_at},and(first_seen_at.eq.${lastRowOfPage1.first_seen_at},id.lt.${lastRowOfPage1.id})`
+    );
   });
 
   test("throws a plain Error with the DB message when a page fails", async () => {
