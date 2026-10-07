@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { VacancyFilterBar } from "./VacancyFilterBar";
 
@@ -214,5 +214,110 @@ describe("VacancyFilterBar", () => {
     expect(screen.getByLabelText("From")).toBeDisabled();
     expect(screen.getByLabelText("To")).toBeDisabled();
     expect(form.querySelector('input[name="view"]')).not.toBeDisabled();
+  });
+
+  test("re-enables fields on pageshow when the page is restored from bfcache", () => {
+    render(
+      <VacancyFilterBar
+        view="todo"
+        reasonFilter={null}
+        q="engineer"
+        company={null}
+        from={null}
+        to={null}
+        status={null}
+        companies={[]}
+        hasActiveFilters={true}
+      />
+    );
+
+    const form = document.querySelector("form") as HTMLFormElement;
+    fireEvent.submit(form);
+    expect(screen.getByLabelText("Company")).toBeDisabled();
+    expect(screen.getByLabelText("From")).toBeDisabled();
+
+    const pageShowEvent = new Event("pageshow");
+    Object.defineProperty(pageShowEvent, "persisted", { value: true });
+    window.dispatchEvent(pageShowEvent);
+
+    expect(screen.getByLabelText("Company")).not.toBeDisabled();
+    expect(screen.getByLabelText("From")).not.toBeDisabled();
+    expect(screen.getByLabelText("To")).not.toBeDisabled();
+  });
+
+  test("does not re-enable fields on a non-persisted pageshow (plain page load)", () => {
+    render(
+      <VacancyFilterBar
+        view="todo"
+        reasonFilter={null}
+        q="engineer"
+        company={null}
+        from={null}
+        to={null}
+        status={null}
+        companies={[]}
+        hasActiveFilters={true}
+      />
+    );
+
+    const form = document.querySelector("form") as HTMLFormElement;
+    fireEvent.submit(form);
+    expect(screen.getByLabelText("Company")).toBeDisabled();
+
+    const pageShowEvent = new Event("pageshow");
+    Object.defineProperty(pageShowEvent, "persisted", { value: false });
+    window.dispatchEvent(pageShowEvent);
+
+    expect(screen.getByLabelText("Company")).toBeDisabled();
+  });
+
+  test("clicking anywhere in From or To opens the native date picker", () => {
+    render(
+      <VacancyFilterBar
+        view="todo"
+        reasonFilter={null}
+        q={null}
+        company={null}
+        from={null}
+        to={null}
+        status={null}
+        companies={[]}
+        hasActiveFilters={false}
+      />
+    );
+
+    const fromInput = screen.getByLabelText("From") as HTMLInputElement;
+    const toInput = screen.getByLabelText("To") as HTMLInputElement;
+    const fromShowPicker = vi.fn();
+    const toShowPicker = vi.fn();
+    fromInput.showPicker = fromShowPicker;
+    toInput.showPicker = toShowPicker;
+
+    fireEvent.click(fromInput);
+    fireEvent.click(toInput);
+
+    expect(fromShowPicker).toHaveBeenCalledTimes(1);
+    expect(toShowPicker).toHaveBeenCalledTimes(1);
+  });
+
+  test("does not throw when showPicker is unsupported", () => {
+    render(
+      <VacancyFilterBar
+        view="todo"
+        reasonFilter={null}
+        q={null}
+        company={null}
+        from={null}
+        to={null}
+        status={null}
+        companies={[]}
+        hasActiveFilters={false}
+      />
+    );
+
+    const fromInput = screen.getByLabelText("From") as HTMLInputElement;
+    (fromInput as unknown as { showPicker?: unknown }).showPicker = undefined;
+
+    expect(() => fireEvent.click(fromInput)).not.toThrow();
   });
 });

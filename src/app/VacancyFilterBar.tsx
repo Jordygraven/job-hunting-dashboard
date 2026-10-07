@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 import type { FormEvent, MouseEvent } from "react";
 import type { IgnoreReason } from "@/lib/vacancyActions/types";
 import { buildVacancyHref } from "@/lib/vacancyActions/vacancyLinks";
@@ -9,26 +10,38 @@ import { STATUS_LABELS, type VacancyStatusFilter, type VacancyTabView } from "@/
 const STATUS_OPTIONS: VacancyStatusFilter[] = ["todo", "applied", "ignored"];
 const inputClass = "rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-black";
 
-// Disable (rather than clear) empty fields right before the native GET
-// submit fires, so the browser excludes them from the query string.
-function handleSubmit(event: FormEvent<HTMLFormElement>) {
-  for (const element of Array.from(event.currentTarget.elements)) {
+function disableEmptyFields(form: HTMLFormElement) {
+  for (const element of Array.from(form.elements)) {
     if (!(element instanceof HTMLInputElement) && !(element instanceof HTMLSelectElement)) continue;
     if (element.type === "hidden" || element.type === "submit") continue;
     if (element.value === "") element.disabled = true;
   }
 }
 
-// Chrome opens the date picker on any click inside the field, not just the
-// calendar icon, which makes it hard to click in to type. Only let clicks in
-// the icon's area (the right-hand edge) open the picker; elsewhere, just
-// focus the field for typing.
-const DATE_PICKER_ICON_WIDTH = 24;
-function handleDateMouseDown(event: MouseEvent<HTMLInputElement>) {
+function reenableFields(form: HTMLFormElement) {
+  for (const element of Array.from(form.elements)) {
+    if (element instanceof HTMLInputElement || element instanceof HTMLSelectElement) {
+      element.disabled = false;
+    }
+  }
+}
+
+// Disable (rather than clear) empty fields right before the native GET
+// submit fires, so the browser excludes them from the query string.
+function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  disableEmptyFields(event.currentTarget);
+}
+
+// A click anywhere in the field opens the native date picker, so it's
+// discoverable without requiring the user to hit the small calendar icon.
+// Typing still works once the field is focused.
+function handleDateClick(event: MouseEvent<HTMLInputElement>) {
   const input = event.currentTarget;
-  if (event.nativeEvent.offsetX < input.offsetWidth - DATE_PICKER_ICON_WIDTH) {
-    event.preventDefault();
-    input.focus();
+  if (typeof input.showPicker !== "function") return;
+  try {
+    input.showPicker();
+  } catch {
+    // Picker unavailable in this browser/context (e.g. not a user gesture); typing still works.
   }
 }
 
@@ -59,9 +72,25 @@ export function VacancyFilterBar({
   // in place.
   const formKey = JSON.stringify([view, reasonFilter, q, company, from, to, status]);
 
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // Fields disabled by handleSubmit stay disabled if the browser restores
+  // this page from the back/forward cache instead of re-rendering it, so
+  // re-enable them whenever that happens.
+  useEffect(() => {
+    function handlePageShow(event: PageTransitionEvent) {
+      if (!event.persisted) return;
+      const form = formRef.current;
+      if (form) reenableFields(form);
+    }
+    window.addEventListener("pageshow", handlePageShow);
+    return () => window.removeEventListener("pageshow", handlePageShow);
+  }, []);
+
   return (
     <form
       key={formKey}
+      ref={formRef}
       method="get"
       action="/"
       onSubmit={handleSubmit}
@@ -93,7 +122,7 @@ export function VacancyFilterBar({
           type="date"
           name="from"
           defaultValue={from ?? ""}
-          onMouseDown={handleDateMouseDown}
+          onClick={handleDateClick}
           className={inputClass}
         />
       </label>
@@ -104,7 +133,7 @@ export function VacancyFilterBar({
           type="date"
           name="to"
           defaultValue={to ?? ""}
-          onMouseDown={handleDateMouseDown}
+          onClick={handleDateClick}
           className={inputClass}
         />
       </label>
