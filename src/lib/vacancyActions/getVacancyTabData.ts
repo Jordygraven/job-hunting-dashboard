@@ -6,8 +6,11 @@ import {
   buildVacancyTabRow,
   countByView,
   resolveReasonFilter,
+  resolveShow,
   resolveView,
   selectRowsForView,
+  sliceRowsForShow,
+  type ShowParam,
   type VacancyTabCounts,
   type VacancyTabRow,
   type VacancyTabView,
@@ -17,6 +20,7 @@ import type { IgnoreReason } from "./types";
 export type VacancyTabSearchParams = {
   view?: string | string[];
   reason?: string | string[];
+  show?: string | string[];
 };
 
 export type VacancyTabData = {
@@ -24,6 +28,8 @@ export type VacancyTabData = {
   reasonFilter: IgnoreReason | "none" | null;
   counts: VacancyTabCounts;
   rows: VacancyTabRow[];
+  show: ShowParam;
+  filteredCount: number;
 };
 
 export async function getVacancyTabData(params: VacancyTabSearchParams): Promise<VacancyTabData> {
@@ -35,11 +41,15 @@ export async function getVacancyTabData(params: VacancyTabSearchParams): Promise
 
   const view = resolveView(params.view);
   const reasonFilter = resolveReasonFilter(view, params.reason);
+  const show = resolveShow(params.show);
+  const filteredRows = selectRowsForView(allRows, view, reasonFilter);
 
   return {
     view,
     reasonFilter,
+    show,
     counts: countByView(allRows),
-    rows: selectRowsForView(allRows, view, reasonFilter),
+    rows: sliceRowsForShow(filteredRows, show),
+    filteredCount: filteredRows.length,
   };
 }

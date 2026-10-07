@@ -74,4 +74,57 @@ describe("getVacancyTabData", () => {
 
     expect(result.view).toBe("todo");
   });
+
+  test("defaults show to 10 and slices rows, reporting the pre-slice filtered count", async () => {
+    const manyVacancies = Array.from({ length: 12 }, (_, i) => ({
+      id: i + 1,
+      title: `Job ${i + 1}`,
+      company: "Co",
+      location: null,
+      url: `https://x/${i + 1}`,
+      firstSeenAt: "2026-10-01T00:00:00.000Z",
+    }));
+    getVacanciesMock.mockResolvedValue(manyVacancies);
+    getVacancyStatusesMock.mockResolvedValue(new Map());
+
+    const result = await getVacancyTabData({});
+
+    expect(result.show).toBe(10);
+    expect(result.rows).toHaveLength(10);
+    expect(result.filteredCount).toBe(12);
+  });
+
+  test("show=20 widens the slice", async () => {
+    const manyVacancies = Array.from({ length: 12 }, (_, i) => ({
+      id: i + 1,
+      title: `Job ${i + 1}`,
+      company: "Co",
+      location: null,
+      url: `https://x/${i + 1}`,
+      firstSeenAt: "2026-10-01T00:00:00.000Z",
+    }));
+    getVacanciesMock.mockResolvedValue(manyVacancies);
+    getVacancyStatusesMock.mockResolvedValue(new Map());
+
+    const result = await getVacancyTabData({ show: "20" });
+
+    expect(result.show).toBe(20);
+    expect(result.rows).toHaveLength(12);
+    expect(result.filteredCount).toBe(12);
+  });
+
+  test("filteredCount reflects the reason filter, not the global ignored count", async () => {
+    getVacanciesMock.mockResolvedValue(VACANCIES);
+    getVacancyStatusesMock.mockResolvedValue(
+      new Map([
+        [2, { status: "ignored", reason: "language", date: "2026-10-02" }],
+        [3, { status: "ignored", reason: "other", date: "2026-10-01" }],
+      ])
+    );
+
+    const result = await getVacancyTabData({ view: "ignored", reason: "language" });
+
+    expect(result.filteredCount).toBe(1);
+    expect(result.counts.ignored).toBe(2);
+  });
 });
