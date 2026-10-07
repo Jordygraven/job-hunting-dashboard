@@ -3,7 +3,8 @@ import "server-only";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { getKlDateString } from "@/lib/format/kualaLumpurDate";
 import { deriveVacancyStatus } from "./deriveVacancyStatus";
-import type { IgnoreReason, VacancyActionRow } from "./types";
+import { mapVacancyActionRow } from "./mapVacancyActionRow";
+import type { IgnoreReason } from "./types";
 import { isValidAppliedOnDate, isValidIgnoreReason, isValidVacancyId } from "./validation";
 import { SAFE_ERROR_MESSAGE } from "./errors";
 
@@ -14,6 +15,21 @@ export type WriteVacancyActionInput =
   | { intent: "editAppliedDate"; vacancyId: number; appliedOn: string };
 
 export type WriteVacancyActionResult = { ok: true } | { ok: false; error: string };
+
+type VacancyActionInsertRow =
+  | { vacancy_id: number; action: "applied"; applied_on: string }
+  | { vacancy_id: number; action: "ignored"; ignore_reason: IgnoreReason | null }
+  | { vacancy_id: number; action: "reset" };
+
+// supabase-js's insert() overloads can't resolve a union argument; widen to this
+// flat shape for the call itself, while construction above stays a discriminated
+// union so each branch can't pair the wrong field with the wrong action.
+type VacancyActionInsertPayload = {
+  vacancy_id: number;
+  action: "applied" | "ignored" | "reset";
+  applied_on?: string;
+  ignore_reason?: IgnoreReason | null;
+};
 
 export async function writeVacancyAction(
   input: WriteVacancyActionInput
@@ -30,7 +46,7 @@ export async function writeVacancyAction(
     return { ok: false, error: "Invalid date." };
   }
 
-  let supabase;
+  let supabase: ReturnType<typeof getSupabaseServerClient>;
   try {
     supabase = getSupabaseServerClient();
   } catch {
@@ -60,14 +76,7 @@ export async function writeVacancyAction(
     return { ok: false, error: SAFE_ERROR_MESSAGE };
   }
 
-  const rows: VacancyActionRow[] = (actionRows ?? []).map((row: any) => ({
-    id: row.id,
-    vacancyId: row.vacancy_id,
-    action: row.action,
-    ignoreReason: row.ignore_reason,
-    appliedOn: row.applied_on,
-    createdAt: row.created_at,
-  }));
+  const rows = (actionRows ?? []).map(mapVacancyActionRow);
 
   const currentStatus = deriveVacancyStatus(rows);
 
@@ -83,13 +92,15 @@ export async function writeVacancyAction(
   if (input.intent === "editAppliedDate" && currentStatus.status !== "applied") {
     return { ok: false, error: "Can only edit the date once applied." };
   }
+  if (
+    input.intent === "editAppliedDate" &&
+    currentStatus.status === "applied" &&
+    input.appliedOn === currentStatus.appliedOn
+  ) {
+    return { ok: true };
+  }
 
-  const insertRow: {
-    vacancy_id: number;
-    action: "applied" | "ignored" | "reset";
-    applied_on?: string;
-    ignore_reason?: IgnoreReason | null;
-  } =
+  const insertRow: VacancyActionInsertRow =
     input.intent === "apply"
       ? { vacancy_id: input.vacancyId, action: "applied", applied_on: getKlDateString() }
       : input.intent === "ignore"
@@ -98,7 +109,9 @@ export async function writeVacancyAction(
           ? { vacancy_id: input.vacancyId, action: "reset" }
           : { vacancy_id: input.vacancyId, action: "applied", applied_on: input.appliedOn };
 
-  const { error: insertError } = await supabase.from("vacancy_actions").insert(insertRow);
+  const { error: insertError } = await supabase
+    .from("vacancy_actions")
+    .insert(insertRow as VacancyActionInsertPayload);
 
   if (insertError) {
     return { ok: false, error: SAFE_ERROR_MESSAGE };

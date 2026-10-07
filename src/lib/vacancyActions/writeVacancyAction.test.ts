@@ -177,6 +177,13 @@ describe("writeVacancyAction success paths", () => {
     expect(result).toEqual({ ok: true });
     expect(insertMock).toHaveBeenCalledWith({ vacancy_id: 1, action: "applied", applied_on: "2026-10-03" });
   });
+
+  test("editAppliedDate is a no-op when the date matches the current applied date", async () => {
+    mockTables({ actionRows: { data: [{ id: 1, vacancy_id: 1, action: "applied", ignore_reason: null, applied_on: "2026-10-01", created_at: "2026-10-01T00:00:00.000Z" }], error: null } });
+    const result = await writeVacancyAction({ intent: "editAppliedDate", vacancyId: 1, appliedOn: "2026-10-01" });
+    expect(result).toEqual({ ok: true });
+    expect(insertMock).not.toHaveBeenCalled();
+  });
 });
 
 describe("writeVacancyAction database failures", () => {
