@@ -72,7 +72,7 @@ describe("resolveReasonFilter", () => {
 
   test("accepts each known reason and 'none' on the ignored tab", () => {
     expect(resolveReasonFilter("ignored", "language")).toBe("language");
-    expect(resolveReasonFilter("ignored", "location")).toBe("location");
+    expect(resolveReasonFilter("ignored", "interest")).toBe("interest");
     expect(resolveReasonFilter("ignored", "seniority")).toBe("seniority");
     expect(resolveReasonFilter("ignored", "other")).toBe("other");
     expect(resolveReasonFilter("ignored", "none")).toBe("none");
@@ -98,9 +98,9 @@ describe("buildVacancyTabRow", () => {
   });
 
   test("ignored status carries ignoredOn and reason (possibly null)", () => {
-    const status: VacancyStatus = { status: "ignored", reason: "location", date: "2026-10-03" };
+    const status: VacancyStatus = { status: "ignored", reason: "interest", date: "2026-10-03" };
     expect(buildVacancyTabRow(vacancy(), status)).toEqual(
-      tabRow({ status: "ignored", ignoredOn: "2026-10-03", ignoreReason: "location" })
+      tabRow({ status: "ignored", ignoredOn: "2026-10-03", ignoreReason: "interest" })
     );
   });
 });

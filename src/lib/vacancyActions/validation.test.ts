@@ -20,7 +20,7 @@ describe("isValidVacancyId", () => {
 describe("isValidIgnoreReason", () => {
   test("accepts each allowed reason", () => {
     expect(isValidIgnoreReason("language")).toBe(true);
-    expect(isValidIgnoreReason("location")).toBe(true);
+    expect(isValidIgnoreReason("interest")).toBe(true);
     expect(isValidIgnoreReason("seniority")).toBe(true);
     expect(isValidIgnoreReason("other")).toBe(true);
   });
@@ -55,6 +55,6 @@ describe("isValidAppliedOnDate", () => {
 
 describe("IGNORE_REASONS", () => {
   test("exports exactly the four allowed reasons", () => {
-    expect(IGNORE_REASONS).toEqual(["language", "location", "seniority", "other"]);
+    expect(IGNORE_REASONS).toEqual(["language", "interest", "seniority", "other"]);
   });
 });

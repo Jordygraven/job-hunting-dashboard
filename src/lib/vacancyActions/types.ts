@@ -1,4 +1,4 @@
-export type IgnoreReason = "language" | "location" | "seniority" | "other";
+export type IgnoreReason = "language" | "interest" | "seniority" | "other";
 
 export type VacancyActionRow = {
   id: number;

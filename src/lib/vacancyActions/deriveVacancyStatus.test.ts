@@ -29,14 +29,14 @@ describe("deriveVacancyStatus", () => {
       row({
         id: 1,
         action: "ignored",
-        ignoreReason: "location",
+        ignoreReason: "interest",
         appliedOn: null,
         createdAt: "2026-10-05T20:00:00.000Z", // 2026-10-06 in KL
       }),
     ];
     expect(deriveVacancyStatus(rows)).toEqual({
       status: "ignored",
-      reason: "location",
+      reason: "interest",
       date: "2026-10-06",
     });
   });

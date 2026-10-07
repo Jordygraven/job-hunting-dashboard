@@ -1,11 +1,11 @@
 import { isDateNotInFutureKl, isValidDateString } from "@/lib/format/kualaLumpurDate";
 import type { IgnoreReason } from "./types";
 
-export const IGNORE_REASONS = ["language", "location", "seniority", "other"] as const satisfies readonly IgnoreReason[];
+export const IGNORE_REASONS = ["language", "interest", "seniority", "other"] as const satisfies readonly IgnoreReason[];
 
 export const REASON_LABELS: Record<(typeof IGNORE_REASONS)[number], string> = {
   language: "Language",
-  location: "Location",
+  interest: "Interest",
   seniority: "Seniority",
   other: "Other",
 };

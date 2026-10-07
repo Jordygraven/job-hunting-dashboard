@@ -69,14 +69,14 @@ describe("VacancyActions — clicking buttons", () => {
   test("picking a reason in the select calls ignore with that reason", async () => {
     ignoreMock.mockResolvedValue({ ok: true });
     render(<VacancyActions vacancyId={7} status="todo" />);
-    fireEvent.change(screen.getByRole("combobox"), { target: { value: "location" } });
-    await waitFor(() => expect(ignoreMock).toHaveBeenCalledWith(7, "location"));
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "interest" } });
+    await waitFor(() => expect(ignoreMock).toHaveBeenCalledWith(7, "interest"));
   });
 
   test("resets the select to the placeholder after a failed ignore action", async () => {
     ignoreMock.mockResolvedValue({ ok: false, error: "Already marked as ignored." });
     render(<VacancyActions vacancyId={7} status="todo" />);
-    fireEvent.change(screen.getByRole("combobox"), { target: { value: "location" } });
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "interest" } });
     await waitFor(() =>
       expect(screen.getByRole("alert")).toHaveTextContent("Already marked as ignored.")
     );

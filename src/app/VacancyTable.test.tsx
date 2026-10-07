@@ -68,12 +68,12 @@ describe("VacancyTable — row rendering", () => {
     render(
       <VacancyTable
         view="ignored"
-        rows={[row({ status: "ignored", ignoredOn: "2026-10-02", ignoreReason: "location" })]}
+        rows={[row({ status: "ignored", ignoredOn: "2026-10-02", ignoreReason: "interest" })]}
       />
     );
     expect(screen.getByRole("columnheader", { name: "Ignored on" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Reason" })).toBeInTheDocument();
-    expect(screen.getByRole("cell", { name: "Location" })).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "Interest" })).toBeInTheDocument();
   });
 
   test("the all tab adds a Status column", () => {
