@@ -112,7 +112,6 @@ export async function runSync(trigger: SyncTrigger): Promise<SyncResult> {
 
     contents.sort((a, b) => a.internalDate - b.internalDate);
 
-    let warnings = 0;
     const allRows: VacancyRow[] = [];
 
     for (const message of contents) {
@@ -120,7 +119,6 @@ export async function runSync(trigger: SyncTrigger): Promise<SyncResult> {
         const { cards, warnings: cardWarnings, failures: cardFailures } = parseLinkedInAlert(
           message.text
         );
-        warnings += cardWarnings.length;
         parserFailures.push(...toParserFailures(message.id, cardFailures));
         warningDetails.push(...toSyncWarnings(message.id, cardWarnings));
         allRows.push(...toVacancyRows(cards, message.id, new Date(message.internalDate)));
@@ -153,7 +151,7 @@ export async function runSync(trigger: SyncTrigger): Promise<SyncResult> {
       unique: uniqueRows.length,
       inserted,
       skipped,
-      warnings,
+      warnings: warningDetails.length,
       parserFailureCount: parserFailures.length,
       parserFailures,
       failures,

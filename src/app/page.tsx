@@ -8,7 +8,7 @@ import { getSyncAlert, STALE_THRESHOLD_HOURS, type AlertReason } from "@/lib/syn
 import { formatKlDateTime } from "@/lib/format/kualaLumpurTime";
 import { buildVacancyHref } from "@/lib/vacancyActions/vacancyLinks";
 import { SyncButton } from "./SyncButton";
-import { SyncDetails } from "./SyncDetails";
+import { SyncDetails, pluralize } from "./SyncDetails";
 import { VacancyFilterBar } from "./VacancyFilterBar";
 import { VacancyTabs } from "./VacancyTabs";
 import { VacancyTable } from "./VacancyTable";
@@ -85,7 +85,7 @@ export default async function Home({
               Finished {formatKlDateTime(latestRun.finishedAt)} ({latestRun.trigger}) —{" "}
               {latestRun.messages ?? 0} messages, {latestRun.cards ?? 0} cards,{" "}
               {latestRun.inserted ?? 0} inserted, {latestRun.skipped ?? 0} skipped,{" "}
-              {latestRun.warnings ?? 0} warning{(latestRun.warnings ?? 0) === 1 ? "" : "s"}.
+              {pluralize(latestRun.warnings ?? 0, "warning")}.
             </p>
           )}
 

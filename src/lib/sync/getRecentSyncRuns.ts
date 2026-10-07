@@ -54,5 +54,13 @@ export async function getRecentSyncRuns(): Promise<SyncRunRecord[]> {
     throw new Error(error.message);
   }
 
-  return (data ?? []).map(mapSyncRunRow);
+  const runs: SyncRunRecord[] = [];
+  for (const row of data ?? []) {
+    try {
+      runs.push(mapSyncRunRow(row));
+    } catch (mapError) {
+      console.error("Skipping unreadable sync_runs row:", mapError);
+    }
+  }
+  return runs;
 }

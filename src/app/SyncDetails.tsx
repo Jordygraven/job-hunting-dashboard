@@ -2,7 +2,7 @@
 import { formatKlDateTime } from "@/lib/format/kualaLumpurTime";
 import type { SyncRunDetail, SyncRunRecord } from "@/lib/sync/syncRunRecord";
 
-function pluralize(count: number, singular: string): string {
+export function pluralize(count: number, singular: string): string {
   return `${count} ${singular}${count === 1 ? "" : "s"}`;
 }
 

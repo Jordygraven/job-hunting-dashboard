@@ -1,13 +1,10 @@
 import type { ParseWarning } from "@/lib/parsers/linkedin";
 import type { SyncRunDetail } from "./syncRunRecord";
+import { toSyncRunDetails } from "./syncRunDetails";
 
 export function toSyncWarnings(
   messageId: string,
   warnings: ParseWarning[]
 ): SyncRunDetail[] {
-  return warnings.map((warning) => ({
-    messageId,
-    jobId: warning.jobId,
-    reason: warning.reason,
-  }));
+  return toSyncRunDetails(messageId, warnings);
 }

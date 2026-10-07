@@ -123,4 +123,19 @@ describe("getRecentSyncRuns", () => {
 
     await expect(getRecentSyncRuns()).rejects.toThrow("connection refused");
   });
+
+  test("skips a row with an unreadable trigger/status instead of failing the whole page", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    limitMock.mockResolvedValue({
+      data: [validRow({ id: 1, trigger: "scheduled" }), validRow({ id: 2 })],
+      error: null,
+    });
+
+    const result = await getRecentSyncRuns();
+
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe(2);
+    expect(consoleErrorSpy).toHaveBeenCalled();
+    consoleErrorSpy.mockRestore();
+  });
 });
