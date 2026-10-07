@@ -1,13 +1,13 @@
 import type { ParseFailure } from "@/lib/parsers/linkedin";
-
-export interface ParserFailure {
-  messageId: string;
-  reason: string;
-}
+import type { SyncRunDetail } from "./syncRunRecord";
 
 export function toParserFailures(
   messageId: string,
   failures: ParseFailure[]
-): ParserFailure[] {
-  return failures.map((failure) => ({ messageId, reason: failure.reason }));
+): SyncRunDetail[] {
+  return failures.map((failure) => ({
+    messageId,
+    jobId: failure.jobId,
+    reason: failure.reason,
+  }));
 }

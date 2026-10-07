@@ -7,7 +7,7 @@ export async function getLatestSyncRun(): Promise<SyncRunRecord | null> {
   const { data, error } = await supabase
     .from("sync_runs")
     .select(
-      "trigger, status, started_at, finished_at, messages, cards, unique_jobs, inserted, skipped, warnings, parser_failure_count, parser_failures, failures, error"
+      "trigger, status, started_at, finished_at, messages, cards, unique_jobs, inserted, skipped, warnings, parser_failure_count, parser_failures, failures, warning_details, error"
     )
     .order("created_at", { ascending: false })
     .limit(1)
@@ -33,6 +33,7 @@ export async function getLatestSyncRun(): Promise<SyncRunRecord | null> {
     parserFailureCount: data.parser_failure_count,
     parserFailures: data.parser_failures ?? [],
     failures: data.failures ?? [],
+    warningDetails: data.warning_details ?? [],
     error: data.error,
   };
 }
