@@ -94,6 +94,30 @@ describe("VacancyActions — pending state", () => {
     resolveApply({ ok: true });
     await waitFor(() => expect(screen.getByRole("button", { name: "Applied" })).not.toBeDisabled());
   });
+
+  test("a second click while pending does not call the Server Action twice", async () => {
+    let resolveApply!: (value: { ok: true }) => void;
+    applyMock.mockReturnValue(new Promise((resolve) => (resolveApply = resolve)));
+    render(<VacancyActions vacancyId={1} status="todo" />);
+
+    const button = screen.getByRole("button", { name: "Applied" });
+    fireEvent.click(button);
+    fireEvent.click(button);
+
+    resolveApply({ ok: true });
+    await waitFor(() => expect(button).not.toBeDisabled());
+    expect(applyMock).toHaveBeenCalledTimes(1);
+  });
+
+  test("re-enables the buttons after a failed action, not only after success", async () => {
+    applyMock.mockResolvedValue({ ok: false, error: "Already marked as applied." });
+    render(<VacancyActions vacancyId={1} status="todo" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Applied" }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Applied" })).not.toBeDisabled()
+    );
+  });
 });
 
 describe("VacancyActions — error paths", () => {
