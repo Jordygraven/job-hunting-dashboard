@@ -1,14 +1,14 @@
 // src/lib/sync/getSyncAlert.ts
-import type { SyncRunFailure, SyncRunRecord } from "./syncRunRecord";
+import type { SyncRunDetail, SyncRunRecord } from "./syncRunRecord";
 
-const STALE_THRESHOLD_HOURS = 26;
+export const STALE_THRESHOLD_HOURS = 26;
 
 export type AlertReason =
   | { type: "no-run" }
   | { type: "stale"; finishedAt: string }
   | { type: "error"; error: string }
-  | { type: "failures"; failures: SyncRunFailure[] }
-  | { type: "parser-failures"; count: number; parserFailures: SyncRunFailure[] };
+  | { type: "failures"; failures: SyncRunDetail[] }
+  | { type: "parser-failures"; count: number; parserFailures: SyncRunDetail[] };
 
 export function getSyncAlert(latestRun: SyncRunRecord | null, now: Date): AlertReason[] {
   if (!latestRun) {

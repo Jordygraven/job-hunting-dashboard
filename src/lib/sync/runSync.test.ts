@@ -50,7 +50,7 @@ describe("runSync success", () => {
     fetchMessageContentMock.mockResolvedValue({ id: "m1", internalDate: "1000", text: "body" });
     parseLinkedInAlertMock.mockReturnValue({
       cards: [{ jobId: "1", title: "Widget Engineer", company: "Acme", location: "Remote", url: "https://x" }],
-      warnings: [],
+      warnings: [{ reason: "unrecognized extra line inside card", snippet: "extra", jobId: "1" }],
       failures: [],
     });
 
@@ -62,10 +62,11 @@ describe("runSync success", () => {
       unique: 1,
       inserted: 1,
       skipped: 0,
-      warnings: 0,
+      warnings: 1,
       parserFailureCount: 0,
       parserFailures: [],
       failures: [],
+      warningDetails: [{ messageId: "m1", jobId: "1", reason: "unrecognized extra line inside card" }],
     });
 
     expect(insertMock).toHaveBeenCalledTimes(1);
@@ -78,14 +79,48 @@ describe("runSync success", () => {
       unique_jobs: 1,
       inserted: 1,
       skipped: 0,
-      warnings: 0,
+      warnings: 1,
       parser_failure_count: 0,
       parser_failures: [],
       failures: [],
+      warning_details: [{ messageId: "m1", jobId: "1", reason: "unrecognized extra line inside card" }],
       error: null,
     });
     expect(row.started_at).toBeTypeOf("string");
     expect(row.finished_at).toBeTypeOf("string");
+  });
+
+  test("some individual messages fail, overall run still succeeds", async () => {
+    fromMock.mockImplementation((table: string) =>
+      table === "vacancies"
+        ? upsertTable({ data: [{ id: 1 }], error: null })
+        : syncRunsTable()
+    );
+    fetchLinkedInAlertsMock.mockResolvedValue([
+      { id: "m1", threadId: "t1", date: "", subject: "" },
+      { id: "m2", threadId: "t2", date: "", subject: "" },
+    ]);
+    fetchMessageContentMock.mockImplementation((id: string) => {
+      if (id === "m2") return Promise.reject(new Error("fetch timeout"));
+      return Promise.resolve({ id: "m1", internalDate: "1000", text: "body" });
+    });
+    parseLinkedInAlertMock.mockReturnValue({
+      cards: [{ jobId: "1", title: "Widget Engineer", company: "Acme", location: "Remote", url: "https://x" }],
+      warnings: [],
+      failures: [],
+    });
+
+    const result = await runSync("cron");
+
+    expect(result.inserted).toBe(1);
+    expect(result.failures).toEqual([{ messageId: "m2", jobId: null, reason: "fetch timeout" }]);
+
+    expect(insertMock).toHaveBeenCalledTimes(1);
+    expect(insertMock.mock.calls[0][0]).toMatchObject({
+      status: "ok",
+      inserted: 1,
+      failures: [{ messageId: "m2", jobId: null, reason: "fetch timeout" }],
+    });
   });
 });
 
@@ -161,7 +196,7 @@ describe("runSync crash after partial message failures", () => {
     });
     parseLinkedInAlertMock.mockReturnValue({
       cards: [{ jobId: "1", title: "Widget Engineer", company: "Acme", location: "Remote", url: "https://x" }],
-      warnings: [],
+      warnings: [{ reason: "unrecognized extra line inside card", snippet: "extra", jobId: "1" }],
       failures: [],
     });
 
@@ -178,6 +213,7 @@ describe("runSync crash after partial message failures", () => {
         { messageId: "m1", reason: "fetch timeout" },
         { messageId: "m2", reason: "message not found" },
       ],
+      warning_details: [{ messageId: "m3", jobId: "1", reason: "unrecognized extra line inside card" }],
     });
   });
 });

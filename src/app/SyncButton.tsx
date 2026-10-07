@@ -3,6 +3,7 @@
 
 import { useActionState } from "react";
 import { runManualSync } from "./actions";
+import { pluralize } from "./SyncDetails";
 import type { SyncResult } from "@/lib/sync/runSync";
 
 type ActionState =
@@ -35,7 +36,7 @@ export function SyncButton() {
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
           Synced: {state.result.messages} messages, {state.result.cards} cards,{" "}
           {state.result.inserted} inserted, {state.result.skipped} skipped,{" "}
-          {state.result.warnings} warnings.
+          {pluralize(state.result.warnings, "warning")}.
         </p>
       )}
 

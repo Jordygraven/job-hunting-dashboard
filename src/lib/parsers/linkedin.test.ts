@@ -127,6 +127,7 @@ Vacature weergeven: https://www.linkedin.com/comm/jobs/view/1000000006/?[strippe
     expect(cards).toEqual([]);
     expect(warnings).toEqual([]);
     expect(failures).toHaveLength(1);
+    expect(failures[0].jobId).toBe('1000000006');
     noUrls(failures[0].snippet);
   });
 
@@ -143,6 +144,7 @@ Vacature weergeven: https://www.linkedin.com/comm/jobs/view/?[stripped]
     expect(cards).toEqual([]);
     expect(warnings).toEqual([]);
     expect(failures).toHaveLength(1);
+    expect(failures[0].jobId).toBeNull();
     noUrls(failures[0].snippet);
   });
 
@@ -168,6 +170,7 @@ Vacature weergeven: https://www.linkedin.com/comm/jobs/view/1000000007/?[strippe
       },
     ]);
     expect(warnings).toHaveLength(1);
+    expect(warnings[0].jobId).toBe('1000000007');
     noUrls(warnings[0].snippet);
   });
 

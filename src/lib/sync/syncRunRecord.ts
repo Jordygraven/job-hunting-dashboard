@@ -1,10 +1,12 @@
 // src/lib/sync/syncRunRecord.ts
-export interface SyncRunFailure {
+export interface SyncRunDetail {
   messageId: string;
+  jobId: string | null;
   reason: string;
 }
 
 export interface SyncRunRecord {
+  id: number;
   trigger: "cron" | "manual";
   status: "ok" | "error";
   startedAt: string;
@@ -16,7 +18,8 @@ export interface SyncRunRecord {
   skipped: number | null;
   warnings: number | null;
   parserFailureCount: number | null;
-  parserFailures: SyncRunFailure[];
-  failures: SyncRunFailure[];
+  parserFailures: SyncRunDetail[];
+  failures: SyncRunDetail[];
+  warningDetails: SyncRunDetail[];
   error: string | null;
 }

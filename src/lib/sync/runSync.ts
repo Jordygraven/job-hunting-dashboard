@@ -2,15 +2,12 @@ import { fetchLinkedInAlerts } from "@/lib/gmail/fetchLinkedInAlerts";
 import { fetchMessageContent } from "@/lib/gmail/fetchMessageContent";
 import { parseLinkedInAlert } from "@/lib/parsers/linkedin";
 import { toVacancyRows, uniqueVacancyRows, type VacancyRow } from "@/lib/sync/vacancyRows";
-import { toParserFailures, type ParserFailure } from "@/lib/sync/parserFailures";
+import { toParserFailures } from "@/lib/sync/parserFailures";
+import { toSyncWarnings } from "@/lib/sync/syncWarnings";
+import type { SyncRunDetail } from "@/lib/sync/syncRunRecord";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 export type SyncTrigger = "cron" | "manual";
-
-export interface SyncFailure {
-  messageId: string;
-  reason: string;
-}
 
 export interface SyncResult {
   messages: number;
@@ -20,17 +17,21 @@ export interface SyncResult {
   skipped: number;
   warnings: number;
   parserFailureCount: number;
-  parserFailures: ParserFailure[];
-  failures: SyncFailure[];
+  parserFailures: SyncRunDetail[];
+  failures: SyncRunDetail[];
+  warningDetails: SyncRunDetail[];
 }
 
 export class SyncDatabaseError extends Error {}
 
+function hasMessage(error: unknown): error is { message: unknown } {
+  return typeof error === "object" && error !== null && "message" in error;
+}
+
 function reasonFor(error: unknown): string {
   if (error instanceof Error) return error.message;
-  if (error && typeof error === "object" && "message" in error) {
-    const msg = (error as any).message;
-    return typeof msg === "string" ? msg : "unknown error";
+  if (hasMessage(error)) {
+    return typeof error.message === "string" ? error.message : "unknown error";
   }
   return "unknown error";
 }
@@ -49,8 +50,9 @@ async function recordSyncRun(args: {
     warnings: number;
     parserFailureCount: number;
   } | null;
-  parserFailures: ParserFailure[];
-  failures: SyncFailure[];
+  parserFailures: SyncRunDetail[];
+  failures: SyncRunDetail[];
+  warningDetails: SyncRunDetail[];
   error: string | null;
 }): Promise<void> {
   try {
@@ -69,6 +71,7 @@ async function recordSyncRun(args: {
       parser_failure_count: args.counts?.parserFailureCount ?? null,
       parser_failures: args.parserFailures,
       failures: args.failures,
+      warning_details: args.warningDetails,
       error: args.error,
     });
 
@@ -82,8 +85,9 @@ async function recordSyncRun(args: {
 
 export async function runSync(trigger: SyncTrigger): Promise<SyncResult> {
   const startedAt = new Date();
-  const failures: SyncFailure[] = [];
-  const parserFailures: ParserFailure[] = [];
+  const failures: SyncRunDetail[] = [];
+  const parserFailures: SyncRunDetail[] = [];
+  const warningDetails: SyncRunDetail[] = [];
 
   try {
     const alerts = await fetchLinkedInAlerts();
@@ -102,13 +106,12 @@ export async function runSync(trigger: SyncTrigger): Promise<SyncResult> {
           text: result.value.text,
         });
       } else {
-        failures.push({ messageId: alerts[i].id, reason: reasonFor(result.reason) });
+        failures.push({ messageId: alerts[i].id, jobId: null, reason: reasonFor(result.reason) });
       }
     }
 
     contents.sort((a, b) => a.internalDate - b.internalDate);
 
-    let warnings = 0;
     const allRows: VacancyRow[] = [];
 
     for (const message of contents) {
@@ -116,11 +119,11 @@ export async function runSync(trigger: SyncTrigger): Promise<SyncResult> {
         const { cards, warnings: cardWarnings, failures: cardFailures } = parseLinkedInAlert(
           message.text
         );
-        warnings += cardWarnings.length;
         parserFailures.push(...toParserFailures(message.id, cardFailures));
+        warningDetails.push(...toSyncWarnings(message.id, cardWarnings));
         allRows.push(...toVacancyRows(cards, message.id, new Date(message.internalDate)));
       } catch (error) {
-        failures.push({ messageId: message.id, reason: reasonFor(error) });
+        failures.push({ messageId: message.id, jobId: null, reason: reasonFor(error) });
       }
     }
 
@@ -148,10 +151,11 @@ export async function runSync(trigger: SyncTrigger): Promise<SyncResult> {
       unique: uniqueRows.length,
       inserted,
       skipped,
-      warnings,
+      warnings: warningDetails.length,
       parserFailureCount: parserFailures.length,
       parserFailures,
       failures,
+      warningDetails,
     };
 
     await recordSyncRun({
@@ -170,6 +174,7 @@ export async function runSync(trigger: SyncTrigger): Promise<SyncResult> {
       },
       parserFailures: result.parserFailures,
       failures: result.failures,
+      warningDetails: result.warningDetails,
       error: null,
     });
 
@@ -183,6 +188,7 @@ export async function runSync(trigger: SyncTrigger): Promise<SyncResult> {
       counts: null,
       parserFailures,
       failures,
+      warningDetails,
       error: reasonFor(error),
     });
 

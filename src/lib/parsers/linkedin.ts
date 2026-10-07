@@ -9,11 +9,13 @@ export interface LinkedInCard {
 export interface ParseFailure {
   reason: string;
   snippet: string;
+  jobId: string | null;
 }
 
 export interface ParseWarning {
   reason: string;
   snippet: string;
+  jobId: string;
 }
 
 export interface ParseResult {
@@ -91,6 +93,7 @@ function finalizeCard(
       failure: {
         reason: 'anchor link has no numeric job id',
         snippet: snippetOf(buffer),
+        jobId: null,
       },
     };
   }
@@ -106,6 +109,7 @@ function finalizeCard(
       failure: {
         reason: 'card is missing a title or company',
         snippet: snippetOf(buffer),
+        jobId,
       },
     };
   }
@@ -125,6 +129,7 @@ function finalizeCard(
       warning: {
         reason: 'unrecognized extra line inside card',
         snippet: snippetOf(extras),
+        jobId: card.jobId,
       },
     };
   }
