@@ -8,6 +8,8 @@ afterEach(() => {
   cleanup();
 });
 
+const BASE = { status: null, q: null, company: null, from: null, to: null };
+
 describe("VacancyTabs", () => {
   test("marks the active tab with aria-current and shows each tab's count", () => {
     render(
@@ -16,6 +18,7 @@ describe("VacancyTabs", () => {
         counts={{ todo: 2, applied: 1, ignored: 3, all: 6 }}
         reasonFilter={null}
         show={10}
+        {...BASE}
       />
     );
     const activeTab = screen.getByRole("link", { name: /applied \(1\)/i });
@@ -26,7 +29,13 @@ describe("VacancyTabs", () => {
 
   test("shows the reason filter links only on the ignored tab", () => {
     render(
-      <VacancyTabs view="todo" counts={{ todo: 0, applied: 0, ignored: 0, all: 0 }} reasonFilter={null} show={10} />
+      <VacancyTabs
+        view="todo"
+        counts={{ todo: 0, applied: 0, ignored: 0, all: 0 }}
+        reasonFilter={null}
+        show={10}
+        {...BASE}
+      />
     );
     expect(screen.queryByRole("link", { name: "No reason" })).not.toBeInTheDocument();
   });
@@ -38,6 +47,7 @@ describe("VacancyTabs", () => {
         counts={{ todo: 0, applied: 0, ignored: 2, all: 2 }}
         reasonFilter="language"
         show={10}
+        {...BASE}
       />
     );
     expect(screen.getByRole("link", { name: "Language" })).toHaveAttribute("aria-current", "page");
@@ -46,14 +56,26 @@ describe("VacancyTabs", () => {
 
   test("tab links carry the right href", () => {
     render(
-      <VacancyTabs view="todo" counts={{ todo: 0, applied: 0, ignored: 0, all: 0 }} reasonFilter={null} show={10} />
+      <VacancyTabs
+        view="todo"
+        counts={{ todo: 0, applied: 0, ignored: 0, all: 0 }}
+        reasonFilter={null}
+        show={10}
+        {...BASE}
+      />
     );
     expect(screen.getByRole("link", { name: /applied/i })).toHaveAttribute("href", "/?view=applied");
   });
 
   test("tab links carry a non-default show value", () => {
     render(
-      <VacancyTabs view="todo" counts={{ todo: 0, applied: 0, ignored: 0, all: 0 }} reasonFilter={null} show={20} />
+      <VacancyTabs
+        view="todo"
+        counts={{ todo: 0, applied: 0, ignored: 0, all: 0 }}
+        reasonFilter={null}
+        show={20}
+        {...BASE}
+      />
     );
     expect(screen.getByRole("link", { name: /applied/i })).toHaveAttribute(
       "href",
@@ -68,11 +90,57 @@ describe("VacancyTabs", () => {
         counts={{ todo: 0, applied: 0, ignored: 0, all: 0 }}
         reasonFilter={null}
         show="all"
+        {...BASE}
       />
     );
     expect(screen.getByRole("link", { name: "Language" })).toHaveAttribute(
       "href",
       "/?view=ignored&reason=language&show=all"
     );
+  });
+
+  test("tab and reason links carry q, company, from, to", () => {
+    render(
+      <VacancyTabs
+        view="ignored"
+        counts={{ todo: 0, applied: 0, ignored: 0, all: 0 }}
+        reasonFilter={null}
+        show={10}
+        status={null}
+        q="engineer"
+        company="Acme"
+        from="2026-10-01"
+        to="2026-10-31"
+      />
+    );
+    expect(screen.getByRole("link", { name: /applied/i })).toHaveAttribute(
+      "href",
+      "/?view=applied&q=engineer&company=Acme&from=2026-10-01&to=2026-10-31"
+    );
+    expect(screen.getByRole("link", { name: "Language" })).toHaveAttribute(
+      "href",
+      "/?view=ignored&reason=language&q=engineer&company=Acme&from=2026-10-01&to=2026-10-31"
+    );
+  });
+
+  test("status is carried on the all tab link but dropped from every other tab link", () => {
+    render(
+      <VacancyTabs
+        view="all"
+        counts={{ todo: 0, applied: 0, ignored: 0, all: 0 }}
+        reasonFilter={null}
+        show={10}
+        status="applied"
+        q={null}
+        company={null}
+        from={null}
+        to={null}
+      />
+    );
+    expect(screen.getByRole("link", { name: /^All/ })).toHaveAttribute(
+      "href",
+      "/?view=all&status=applied"
+    );
+    expect(screen.getByRole("link", { name: /to do/i })).toHaveAttribute("href", "/?view=todo");
   });
 });

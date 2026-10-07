@@ -1,7 +1,8 @@
 import Link from "next/link";
-import type { ShowParam, VacancyTabCounts, VacancyTabView } from "@/lib/vacancyActions/vacancyTabs";
+import type { ShowParam, VacancyStatusFilter, VacancyTabCounts, VacancyTabView } from "@/lib/vacancyActions/vacancyTabs";
 import type { IgnoreReason } from "@/lib/vacancyActions/types";
 import { IGNORE_REASONS, REASON_LABELS } from "@/lib/vacancyActions/validation";
+import { buildVacancyHref } from "@/lib/vacancyActions/vacancyLinks";
 
 const TABS: { view: VacancyTabView; label: string }[] = [
   { view: "todo", label: "To do" },
@@ -10,47 +11,32 @@ const TABS: { view: VacancyTabView; label: string }[] = [
   { view: "all", label: "All" },
 ];
 
-const REASON_FILTERS: { value: string | null; label: string }[] = [
+const REASON_FILTERS: { value: IgnoreReason | "none" | null; label: string }[] = [
   { value: null, label: "All reasons" },
-  ...IGNORE_REASONS.map((reason) => ({ value: reason as string, label: REASON_LABELS[reason] })),
-  { value: "none", label: "No reason" },
+  ...IGNORE_REASONS.map((reason) => ({ value: reason, label: REASON_LABELS[reason] })),
+  { value: "none" as const, label: "No reason" },
 ];
-
-function showQuery(show: ShowParam): string | null {
-  return show === 10 ? null : String(show);
-}
-
-function tabHref(view: VacancyTabView, show: ShowParam): string {
-  const params = new URLSearchParams({ view });
-  const showValue = showQuery(show);
-  if (showValue) {
-    params.set("show", showValue);
-  }
-  return `/?${params.toString()}`;
-}
-
-function reasonHref(reasonValue: string | null, show: ShowParam): string {
-  const params = new URLSearchParams({ view: "ignored" });
-  if (reasonValue) {
-    params.set("reason", reasonValue);
-  }
-  const showValue = showQuery(show);
-  if (showValue) {
-    params.set("show", showValue);
-  }
-  return `/?${params.toString()}`;
-}
 
 export function VacancyTabs({
   view,
   counts,
   reasonFilter,
+  status,
   show,
+  q,
+  company,
+  from,
+  to,
 }: {
   view: VacancyTabView;
   counts: VacancyTabCounts;
   reasonFilter: IgnoreReason | "none" | null;
+  status: VacancyStatusFilter | null;
   show: ShowParam;
+  q: string | null;
+  company: string | null;
+  from: string | null;
+  to: string | null;
 }) {
   return (
     <>
@@ -58,7 +44,7 @@ export function VacancyTabs({
         {TABS.map((tab) => (
           <Link
             key={tab.view}
-            href={tabHref(tab.view, show)}
+            href={buildVacancyHref({ view: tab.view, status, show, q, company, from, to })}
             aria-current={view === tab.view ? "page" : undefined}
             className={`pb-2 text-sm ${
               view === tab.view
@@ -76,7 +62,15 @@ export function VacancyTabs({
           {REASON_FILTERS.map((filter) => (
             <Link
               key={filter.label}
-              href={reasonHref(filter.value, show)}
+              href={buildVacancyHref({
+                view: "ignored",
+                reasonFilter: filter.value,
+                show,
+                q,
+                company,
+                from,
+                to,
+              })}
               aria-current={reasonFilter === filter.value ? "page" : undefined}
               className={
                 reasonFilter === filter.value
