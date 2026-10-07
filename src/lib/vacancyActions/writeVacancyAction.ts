@@ -83,6 +83,13 @@ export async function writeVacancyAction(
   if (input.intent === "editAppliedDate" && currentStatus.status !== "applied") {
     return { ok: false, error: "Can only edit the date once applied." };
   }
+  if (
+    input.intent === "editAppliedDate" &&
+    currentStatus.status === "applied" &&
+    input.appliedOn === currentStatus.appliedOn
+  ) {
+    return { ok: true };
+  }
 
   const insertRow: {
     vacancy_id: number;
