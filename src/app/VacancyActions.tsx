@@ -10,6 +10,9 @@ import type { IgnoreReason } from "@/lib/vacancyActions/types";
 type VacancyRowStatus = "todo" | "applied" | "ignored";
 type ActionResult = { ok: true } | { ok: false; error: string };
 
+const CONTROL_CLASS =
+  "rounded-full border border-black px-3 py-1 text-sm transition-colors hover:bg-black hover:text-white disabled:pointer-events-none disabled:opacity-40 dark:border-white dark:hover:bg-white dark:hover:text-black";
+
 export function VacancyActions({
   vacancyId,
   status,
@@ -49,18 +52,29 @@ export function VacancyActions({
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-2">
         {status === "todo" && (
-          <button type="button" disabled={isPending} onClick={() => run(() => apply(vacancyId))}>
+          <button
+            type="button"
+            className={CONTROL_CLASS}
+            disabled={isPending}
+            onClick={() => run(() => apply(vacancyId))}
+          >
             Applied
           </button>
         )}
 
         {(status === "todo" || status === "applied") && (
           <>
-            <button type="button" disabled={isPending} onClick={() => run(() => ignore(vacancyId))}>
+            <button
+              type="button"
+              className={CONTROL_CLASS}
+              disabled={isPending}
+              onClick={() => run(() => ignore(vacancyId))}
+            >
               Ignore
             </button>
             <select
               aria-label="Ignore with reason"
+              className={CONTROL_CLASS}
               disabled={isPending}
               value={reasonValue}
               onChange={handleReasonChange}
@@ -76,7 +90,12 @@ export function VacancyActions({
         )}
 
         {(status === "applied" || status === "ignored") && (
-          <button type="button" disabled={isPending} onClick={() => run(() => undo(vacancyId))}>
+          <button
+            type="button"
+            className={CONTROL_CLASS}
+            disabled={isPending}
+            onClick={() => run(() => undo(vacancyId))}
+          >
             Undo
           </button>
         )}
