@@ -12,7 +12,7 @@ type VacancyRowStatus = "todo" | "applied" | "ignored";
 type ActionResult = { ok: true } | { ok: false; error: string };
 
 const CONTROL_CLASS =
-  "rounded-full border border-black px-3 py-1 text-sm transition-colors hover:bg-black hover:text-white disabled:pointer-events-none disabled:opacity-40 dark:border-white dark:hover:bg-white dark:hover:text-black";
+  "whitespace-nowrap rounded-full border border-black px-3 py-1 text-sm transition-colors hover:bg-black hover:text-white disabled:pointer-events-none disabled:opacity-40 dark:border-white dark:hover:bg-white dark:hover:text-black";
 
 export function VacancyActions({
   vacancyId,
