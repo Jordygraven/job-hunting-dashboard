@@ -5,6 +5,7 @@ import {
   describeShownRows,
   resolveReasonFilter,
   resolveShow,
+  resolveStatusFilter,
   resolveView,
   selectRowsForView,
   sliceRowsForShow,
@@ -81,6 +82,25 @@ describe("resolveReasonFilter", () => {
   test("is null when absent or unknown on the ignored tab (meaning: all reasons)", () => {
     expect(resolveReasonFilter("ignored", undefined)).toBeNull();
     expect(resolveReasonFilter("ignored", "bogus")).toBeNull();
+  });
+});
+
+describe("resolveStatusFilter", () => {
+  test("is always null outside the all tab, even with a valid-looking status", () => {
+    expect(resolveStatusFilter("todo", "applied")).toBeNull();
+    expect(resolveStatusFilter("applied", "todo")).toBeNull();
+    expect(resolveStatusFilter("ignored", "ignored")).toBeNull();
+  });
+
+  test("accepts each known status on the all tab", () => {
+    expect(resolveStatusFilter("all", "todo")).toBe("todo");
+    expect(resolveStatusFilter("all", "applied")).toBe("applied");
+    expect(resolveStatusFilter("all", "ignored")).toBe("ignored");
+  });
+
+  test("is null when absent or unknown on the all tab (meaning: all statuses)", () => {
+    expect(resolveStatusFilter("all", undefined)).toBeNull();
+    expect(resolveStatusFilter("all", "bogus")).toBeNull();
   });
 });
 

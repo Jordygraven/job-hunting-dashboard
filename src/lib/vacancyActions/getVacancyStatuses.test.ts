@@ -11,9 +11,16 @@ import { SUPABASE_MAX_ROWS } from "@/lib/supabase/fetchAllRows";
 
 function actionsTable(pages: { data: unknown; error: unknown }[]) {
   let call = 0;
-  const rangeMock = vi.fn(() => Promise.resolve(pages[Math.min(call++, pages.length - 1)]));
-  const orderMock = vi.fn(() => ({ range: rangeMock }));
-  return { table: { select: () => ({ order: orderMock }) }, rangeMock, orderMock };
+  const ltMock = vi.fn();
+  function builder(): any {
+    const b: any = { lt: (...args: any[]) => { ltMock(...args); return b; } };
+    b.then = (resolve: any, reject: any) =>
+      Promise.resolve(pages[Math.min(call++, pages.length - 1)]).then(resolve, reject);
+    return b;
+  }
+  const limitMock = vi.fn(() => builder());
+  const orderMock = vi.fn(() => ({ limit: limitMock }));
+  return { table: { select: () => ({ order: orderMock }) }, limitMock, orderMock, ltMock };
 }
 
 beforeEach(() => {
@@ -40,6 +47,7 @@ describe("getVacancyStatuses", () => {
         ],
         error: null,
       },
+      { data: [], error: null },
     ]);
     fromMock.mockReturnValue(table);
 
@@ -60,6 +68,7 @@ describe("getVacancyStatuses", () => {
         ],
         error: null,
       },
+      { data: [], error: null },
     ]);
     fromMock.mockReturnValue(table);
 
@@ -88,9 +97,10 @@ describe("getVacancyStatuses", () => {
         created_at: "2026-09-01T00:00:00.000Z",
       },
     ];
-    const { table, rangeMock } = actionsTable([
+    const { table, limitMock, ltMock } = actionsTable([
       { data: fullPage, error: null },
       { data: secondPage, error: null },
+      { data: [], error: null },
     ]);
     fromMock.mockReturnValue(table);
 
@@ -98,7 +108,29 @@ describe("getVacancyStatuses", () => {
 
     expect(statuses.size).toBe(SUPABASE_MAX_ROWS + 1);
     expect(statuses.get(SUPABASE_MAX_ROWS + 1)).toEqual({ status: "ignored", reason: "other", date: "2026-09-01" });
-    expect(rangeMock).toHaveBeenCalledTimes(2);
+    expect(limitMock).toHaveBeenCalledTimes(3);
+    expect(ltMock).toHaveBeenCalledTimes(2);
+  });
+
+  test("pages by a cursor on the last row's id, not a numeric offset — so a row inserted between page requests can't be skipped or double-counted", async () => {
+    const fullPage = Array.from({ length: SUPABASE_MAX_ROWS }, (_, i) => ({
+      id: SUPABASE_MAX_ROWS - i,
+      vacancy_id: SUPABASE_MAX_ROWS - i,
+      action: "applied",
+      ignore_reason: null,
+      applied_on: "2026-10-01",
+      created_at: "2026-10-01T00:00:00.000Z",
+    }));
+    const { table, ltMock } = actionsTable([
+      { data: fullPage, error: null },
+      { data: [], error: null },
+    ]);
+    fromMock.mockReturnValue(table);
+
+    await getVacancyStatuses();
+
+    const lastRowOfPage1 = fullPage[fullPage.length - 1];
+    expect(ltMock).toHaveBeenCalledWith("id", lastRowOfPage1.id);
   });
 
   test("throws a plain Error with the DB message when a page fails", async () => {

@@ -27,7 +27,7 @@ export type VacancyTabCounts = {
 const VIEWS: readonly VacancyTabView[] = ["todo", "applied", "ignored", "all"];
 const REASON_FILTERS: readonly string[] = [...IGNORE_REASONS, "none"];
 
-function firstOf(value: string | string[] | undefined): string | undefined {
+export function firstOf(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
@@ -48,6 +48,29 @@ export function resolveReasonFilter(
     ? (candidate as IgnoreReason | "none")
     : null;
 }
+
+export type VacancyStatusFilter = VacancyTabRow["status"];
+
+const STATUS_FILTERS: readonly VacancyStatusFilter[] = ["todo", "applied", "ignored"];
+
+export function resolveStatusFilter(
+  view: VacancyTabView,
+  value: string | string[] | undefined
+): VacancyStatusFilter | null {
+  if (view !== "all") {
+    return null;
+  }
+  const candidate = firstOf(value);
+  return candidate !== undefined && (STATUS_FILTERS as readonly string[]).includes(candidate)
+    ? (candidate as VacancyStatusFilter)
+    : null;
+}
+
+export const STATUS_LABELS: Record<VacancyTabRow["status"], string> = {
+  todo: "To do",
+  applied: "Applied",
+  ignored: "Ignored",
+};
 
 export function buildVacancyTabRow(vacancy: Vacancy, status: VacancyStatus): VacancyTabRow {
   return {
