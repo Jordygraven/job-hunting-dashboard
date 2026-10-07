@@ -27,7 +27,7 @@ export type VacancyTabCounts = {
 const VIEWS: readonly VacancyTabView[] = ["todo", "applied", "ignored", "all"];
 const REASON_FILTERS: readonly string[] = [...IGNORE_REASONS, "none"];
 
-function firstOf(value: string | string[] | undefined): string | undefined {
+export function firstOf(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
