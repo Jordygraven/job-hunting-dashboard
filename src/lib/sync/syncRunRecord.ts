@@ -6,6 +6,7 @@ export interface SyncRunDetail {
 }
 
 export interface SyncRunRecord {
+  id: number;
   trigger: "cron" | "manual";
   status: "ok" | "error";
   startedAt: string;

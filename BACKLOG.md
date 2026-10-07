@@ -10,10 +10,8 @@
 
 - Task 2 (Basic Auth): the `Basic ` scheme check is case-sensitive, though RFC 7235 scheme names aren't — `src/lib/auth/basicAuth.ts`.
 - Task 4 (sync status/alert): no test at the exact 26-hour stale boundary (only a 27h "clearly stale" case) — `src/lib/sync/getSyncAlert.test.ts`.
-- Task 4 (sync status/alert): the 26-hour threshold is duplicated as a magic number between the constant and a hardcoded UI string — `src/lib/sync/getSyncAlert.ts` / `src/app/page.tsx`.
 - Final review: `layout.tsx` still has the default create-next-app `title`/`description` metadata — `src/app/layout.tsx`.
 - Final review: a successful manual sync shows the same counts twice (button result + status panel) — `src/app/SyncButton.tsx` / `src/app/page.tsx`.
-- Final review: `getLatestSyncRun` assigns the untyped Supabase row straight into narrow unions (`trigger`, `status`) with no runtime validation — `src/lib/sync/getLatestSyncRun.ts`.
 - Final review: `vitest.config.ts` (tooling) rode along in the `runSync` extraction commit rather than its own commit — noted for the record, already merged as-is.
 - Final review: `VERCEL_AUTOMATION_BYPASS_SECRET` is documented in `.env.example` but referenced nowhere in the code (expected — it's for bypassing Vercel's own deployment protection when testing a preview, not app code) — `.env.example`.
 - Final review: an unset `DASHBOARD_PASSWORD` correctly denies access but gives a confusing endless-reprompt UX with no "deploy is misconfigured" signal — `src/proxy.ts`.

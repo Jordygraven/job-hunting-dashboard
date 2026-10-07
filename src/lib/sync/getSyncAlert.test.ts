@@ -7,6 +7,7 @@ const NOW = new Date("2026-10-06T12:00:00.000Z");
 
 function run(overrides: Partial<SyncRunRecord> = {}): SyncRunRecord {
   return {
+    id: 1,
     trigger: "cron",
     status: "ok",
     startedAt: "2026-10-06T11:00:00.000Z",

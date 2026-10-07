@@ -3,11 +3,12 @@ import {
   getVacancyTabData,
   type VacancyTabSearchParams,
 } from "@/lib/vacancyActions/getVacancyTabData";
-import { getLatestSyncRun } from "@/lib/sync/getLatestSyncRun";
-import { getSyncAlert, type AlertReason } from "@/lib/sync/getSyncAlert";
+import { getRecentSyncRuns } from "@/lib/sync/getRecentSyncRuns";
+import { getSyncAlert, STALE_THRESHOLD_HOURS, type AlertReason } from "@/lib/sync/getSyncAlert";
 import { formatKlDateTime } from "@/lib/format/kualaLumpurTime";
 import { buildVacancyHref } from "@/lib/vacancyActions/vacancyLinks";
 import { SyncButton } from "./SyncButton";
+import { SyncDetails } from "./SyncDetails";
 import { VacancyFilterBar } from "./VacancyFilterBar";
 import { VacancyTabs } from "./VacancyTabs";
 import { VacancyTable } from "./VacancyTable";
@@ -20,7 +21,7 @@ function alertText(reason: AlertReason): string {
     case "no-run":
       return "No sync has ever run.";
     case "stale":
-      return `Last sync finished at ${formatKlDateTime(reason.finishedAt)}, more than 26 hours ago.`;
+      return `Last sync finished at ${formatKlDateTime(reason.finishedAt)}, more than ${STALE_THRESHOLD_HOURS} hours ago.`;
     case "error":
       return `Last sync failed: ${reason.error}`;
     case "failures":
@@ -42,8 +43,9 @@ export default async function Home({
   const params = await searchParams;
   const [
     { view, reasonFilter, statusFilter, counts, rows, show, filteredCount, q, company, from, to, companies, hasActiveFilters },
-    latestRun,
-  ] = await Promise.all([getVacancyTabData(params), getLatestSyncRun()]);
+    recentRuns,
+  ] = await Promise.all([getVacancyTabData(params), getRecentSyncRuns()]);
+  const latestRun = recentRuns[0] ?? null;
   const alerts = getSyncAlert(latestRun, new Date());
   const clearFiltersHref = buildVacancyHref({ view, reasonFilter });
 
@@ -83,9 +85,11 @@ export default async function Home({
               Finished {formatKlDateTime(latestRun.finishedAt)} ({latestRun.trigger}) —{" "}
               {latestRun.messages ?? 0} messages, {latestRun.cards ?? 0} cards,{" "}
               {latestRun.inserted ?? 0} inserted, {latestRun.skipped ?? 0} skipped,{" "}
-              {latestRun.warnings ?? 0} warnings.
+              {latestRun.warnings ?? 0} warning{(latestRun.warnings ?? 0) === 1 ? "" : "s"}.
             </p>
           )}
+
+          <SyncDetails recentRuns={recentRuns} defaultOpen={alerts.length > 0} />
         </section>
 
         <section>

@@ -1,7 +1,7 @@
 // src/lib/sync/getSyncAlert.ts
 import type { SyncRunDetail, SyncRunRecord } from "./syncRunRecord";
 
-const STALE_THRESHOLD_HOURS = 26;
+export const STALE_THRESHOLD_HOURS = 26;
 
 export type AlertReason =
   | { type: "no-run" }
