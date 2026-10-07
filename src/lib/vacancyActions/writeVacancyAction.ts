@@ -46,7 +46,7 @@ export async function writeVacancyAction(
     return { ok: false, error: "Invalid date." };
   }
 
-  let supabase;
+  let supabase: ReturnType<typeof getSupabaseServerClient>;
   try {
     supabase = getSupabaseServerClient();
   } catch {
