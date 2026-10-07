@@ -33,7 +33,6 @@
 
 ## Step 2 (triage UI) — 7 Oct
 
-- Task 2 (pagination fix): offset pagination via `.range()` can skip or double-count a row if a sync inserts into `vacancies` between two page requests of the same read; self-corrects on the next page load, so impact is near-nil at today's row counts — `src/lib/vacancies/getVacancies.ts` / `src/lib/vacancyActions/getVacancyStatuses.ts`.
 - Final review: this branch adds roughly 13-14 more ESLint `no-explicit-any` errors (not build-gating), concentrated in new/restructured test files — `src/app/VacancyActions.test.tsx`, `src/lib/vacancies/getVacancies.test.ts`, `src/lib/vacancyActions/getVacancyTabData.test.ts`, `src/lib/vacancyActions/writeVacancyAction.test.ts`.
 - Final review: `deriveVacancyStatus`'s new throw-on-invariant-violation (a latest "applied" row with null `appliedOn`) now sits behind a real caller (page load) for the first time, and a trip there 500s the whole `/` route (sync panel + all four tabs), same as any other DB-read error already did before this branch. Non-blocking — the DB CHECK constraint makes it practically unreachable — but if per-row degradation is ever wanted instead of page-wide failure, this is where to start.
 - Final review (repo convention): this plan's own sample test code omitted `afterEach(() => cleanup())` from `@testing-library/react` in two separate new `// @vitest-environment jsdom` test files; both had to be fixed independently to make the plan's own tests pass. This repo has no global test cleanup configured, so any future jsdom test file needs this hook added by hand.
