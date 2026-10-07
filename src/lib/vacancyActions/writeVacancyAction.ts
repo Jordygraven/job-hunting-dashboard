@@ -3,7 +3,8 @@ import "server-only";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { getKlDateString } from "@/lib/format/kualaLumpurDate";
 import { deriveVacancyStatus } from "./deriveVacancyStatus";
-import type { IgnoreReason, VacancyActionRow } from "./types";
+import { mapVacancyActionRow } from "./mapVacancyActionRow";
+import type { IgnoreReason } from "./types";
 import { isValidAppliedOnDate, isValidIgnoreReason, isValidVacancyId } from "./validation";
 import { SAFE_ERROR_MESSAGE } from "./errors";
 
@@ -60,14 +61,7 @@ export async function writeVacancyAction(
     return { ok: false, error: SAFE_ERROR_MESSAGE };
   }
 
-  const rows: VacancyActionRow[] = (actionRows ?? []).map((row: any) => ({
-    id: row.id,
-    vacancyId: row.vacancy_id,
-    action: row.action,
-    ignoreReason: row.ignore_reason,
-    appliedOn: row.applied_on,
-    createdAt: row.created_at,
-  }));
+  const rows = (actionRows ?? []).map(mapVacancyActionRow);
 
   const currentStatus = deriveVacancyStatus(rows);
 

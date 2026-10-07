@@ -3,16 +3,8 @@ import "server-only";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { fetchAllRows } from "@/lib/supabase/fetchAllRows";
 import { deriveVacancyStatus } from "./deriveVacancyStatus";
+import { mapVacancyActionRow, type VacancyActionDbRow } from "./mapVacancyActionRow";
 import type { VacancyActionRow, VacancyStatus } from "./types";
-
-type VacancyActionDbRow = {
-  id: number;
-  vacancy_id: number;
-  action: "applied" | "ignored" | "reset";
-  ignore_reason: VacancyActionRow["ignoreReason"];
-  applied_on: string | null;
-  created_at: string;
-};
 
 export async function getVacancyStatuses(): Promise<Map<number, VacancyStatus>> {
   const supabase = getSupabaseServerClient();
@@ -27,14 +19,7 @@ export async function getVacancyStatuses(): Promise<Map<number, VacancyStatus>> 
 
   const latestRowByVacancyId = new Map<number, VacancyActionRow>();
   for (const row of rows) {
-    const mapped: VacancyActionRow = {
-      id: row.id,
-      vacancyId: row.vacancy_id,
-      action: row.action,
-      ignoreReason: row.ignore_reason,
-      appliedOn: row.applied_on,
-      createdAt: row.created_at,
-    };
+    const mapped = mapVacancyActionRow(row);
     // Rows arrive highest id first, so the first row seen for a vacancy is its latest.
     if (!latestRowByVacancyId.has(mapped.vacancyId)) {
       latestRowByVacancyId.set(mapped.vacancyId, mapped);
