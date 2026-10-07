@@ -1,14 +1,7 @@
 import { formatKlDate } from "@/lib/format/kualaLumpurTime";
 import type { VacancyTabRow, VacancyTabView } from "@/lib/vacancyActions/vacancyTabs";
-import type { IgnoreReason } from "@/lib/vacancyActions/types";
+import { REASON_LABELS } from "@/lib/vacancyActions/validation";
 import { VacancyActions } from "./VacancyActions";
-
-const REASON_LABELS: Record<IgnoreReason, string> = {
-  language: "Language",
-  location: "Location",
-  seniority: "Seniority",
-  other: "Other",
-};
 
 const EMPTY_STATE_TEXT: Record<VacancyTabView, string> = {
   todo: "No vacancies to triage.",

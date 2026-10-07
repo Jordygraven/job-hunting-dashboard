@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ShowParam, VacancyTabCounts, VacancyTabView } from "@/lib/vacancyActions/vacancyTabs";
 import type { IgnoreReason } from "@/lib/vacancyActions/types";
+import { IGNORE_REASONS, REASON_LABELS } from "@/lib/vacancyActions/validation";
 
 const TABS: { view: VacancyTabView; label: string }[] = [
   { view: "todo", label: "To do" },
@@ -11,10 +12,7 @@ const TABS: { view: VacancyTabView; label: string }[] = [
 
 const REASON_FILTERS: { value: string | null; label: string }[] = [
   { value: null, label: "All reasons" },
-  { value: "language", label: "Language" },
-  { value: "location", label: "Location" },
-  { value: "seniority", label: "Seniority" },
-  { value: "other", label: "Other" },
+  ...IGNORE_REASONS.map((reason) => ({ value: reason as string, label: REASON_LABELS[reason] })),
   { value: "none", label: "No reason" },
 ];
 

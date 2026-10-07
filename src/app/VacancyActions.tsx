@@ -3,17 +3,10 @@
 
 import { useState } from "react";
 import { apply, ignore, undo } from "./actions";
-import { IGNORE_REASONS } from "@/lib/vacancyActions/validation";
+import { IGNORE_REASONS, REASON_LABELS } from "@/lib/vacancyActions/validation";
 import type { IgnoreReason } from "@/lib/vacancyActions/types";
 
 const GENERIC_ERROR = "Something went wrong. Please try again.";
-
-const REASON_LABELS: Record<IgnoreReason, string> = {
-  language: "Language",
-  location: "Location",
-  seniority: "Seniority",
-  other: "Other",
-};
 
 type VacancyRowStatus = "todo" | "applied" | "ignored";
 type ActionResult = { ok: true } | { ok: false; error: string };
