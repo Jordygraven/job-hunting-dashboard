@@ -32,12 +32,15 @@ export function VacancyPagination({
   }
 
   return (
-    <div className="mt-3 text-left text-sm text-zinc-600 dark:text-zinc-400">
-      <p>
+    <div className="mt-3 w-full text-left text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="w-full text-left">
         Showing {summary.shown} of {summary.total}
       </p>
       {summary.more && (
-        <Link href={moreHref(view, reasonFilter, summary.more.show)} className="underline">
+        <Link
+          href={moreHref(view, reasonFilter, summary.more.show)}
+          className="block w-fit text-left underline"
+        >
           {summary.more.label}
         </Link>
       )}
