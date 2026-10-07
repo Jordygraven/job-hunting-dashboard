@@ -80,4 +80,9 @@ describe("VacancyTable — row rendering", () => {
     render(<VacancyTable view="all" rows={[row({ status: "ignored" })]} />);
     expect(screen.getByRole("columnheader", { name: "Status" })).toBeInTheDocument();
   });
+
+  test("the all tab's status cell reads 'To do', matching the tab label, not raw 'todo'", () => {
+    render(<VacancyTable view="all" rows={[row({ status: "todo" })]} />);
+    expect(screen.getByRole("cell", { name: "To do" })).toBeInTheDocument();
+  });
 });

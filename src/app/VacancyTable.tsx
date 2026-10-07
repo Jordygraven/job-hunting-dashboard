@@ -10,6 +10,12 @@ const EMPTY_STATE_TEXT: Record<VacancyTabView, string> = {
   all: "No vacancies yet.",
 };
 
+const STATUS_LABELS: Record<VacancyTabRow["status"], string> = {
+  todo: "To do",
+  applied: "Applied",
+  ignored: "Ignored",
+};
+
 export function VacancyTable({ view, rows }: { view: VacancyTabView; rows: VacancyTabRow[] }) {
   if (rows.length === 0) {
     return <p className="text-zinc-600 dark:text-zinc-400">{EMPTY_STATE_TEXT[view]}</p>;
@@ -63,7 +69,7 @@ export function VacancyTable({ view, rows }: { view: VacancyTabView; rows: Vacan
                 </td>
               </>
             )}
-            {view === "all" && <td className="py-2 pr-4 capitalize">{row.status}</td>}
+            {view === "all" && <td className="py-2 pr-4">{STATUS_LABELS[row.status]}</td>}
             <td className="py-2 pr-4">
               <VacancyActions vacancyId={row.id} status={row.status} />
             </td>
