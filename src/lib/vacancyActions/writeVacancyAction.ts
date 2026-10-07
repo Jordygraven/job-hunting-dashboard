@@ -16,6 +16,21 @@ export type WriteVacancyActionInput =
 
 export type WriteVacancyActionResult = { ok: true } | { ok: false; error: string };
 
+type VacancyActionInsertRow =
+  | { vacancy_id: number; action: "applied"; applied_on: string }
+  | { vacancy_id: number; action: "ignored"; ignore_reason: IgnoreReason | null }
+  | { vacancy_id: number; action: "reset" };
+
+// supabase-js's insert() overloads can't resolve a union argument; widen to this
+// flat shape for the call itself, while construction above stays a discriminated
+// union so each branch can't pair the wrong field with the wrong action.
+type VacancyActionInsertPayload = {
+  vacancy_id: number;
+  action: "applied" | "ignored" | "reset";
+  applied_on?: string;
+  ignore_reason?: IgnoreReason | null;
+};
+
 export async function writeVacancyAction(
   input: WriteVacancyActionInput
 ): Promise<WriteVacancyActionResult> {
@@ -85,12 +100,7 @@ export async function writeVacancyAction(
     return { ok: true };
   }
 
-  const insertRow: {
-    vacancy_id: number;
-    action: "applied" | "ignored" | "reset";
-    applied_on?: string;
-    ignore_reason?: IgnoreReason | null;
-  } =
+  const insertRow: VacancyActionInsertRow =
     input.intent === "apply"
       ? { vacancy_id: input.vacancyId, action: "applied", applied_on: getKlDateString() }
       : input.intent === "ignore"
@@ -99,7 +109,9 @@ export async function writeVacancyAction(
           ? { vacancy_id: input.vacancyId, action: "reset" }
           : { vacancy_id: input.vacancyId, action: "applied", applied_on: input.appliedOn };
 
-  const { error: insertError } = await supabase.from("vacancy_actions").insert(insertRow);
+  const { error: insertError } = await supabase
+    .from("vacancy_actions")
+    .insert(insertRow as VacancyActionInsertPayload);
 
   if (insertError) {
     return { ok: false, error: SAFE_ERROR_MESSAGE };
