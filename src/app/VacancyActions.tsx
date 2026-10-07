@@ -4,9 +4,8 @@
 import { useState } from "react";
 import { apply, ignore, undo } from "./actions";
 import { IGNORE_REASONS, REASON_LABELS } from "@/lib/vacancyActions/validation";
+import { SAFE_ERROR_MESSAGE } from "@/lib/vacancyActions/errors";
 import type { IgnoreReason } from "@/lib/vacancyActions/types";
-
-const GENERIC_ERROR = "Something went wrong. Please try again.";
 
 type VacancyRowStatus = "todo" | "applied" | "ignored";
 type ActionResult = { ok: true } | { ok: false; error: string };
@@ -30,7 +29,7 @@ export function VacancyActions({
         setError(result.error);
       }
     } catch {
-      setError(GENERIC_ERROR);
+      setError(SAFE_ERROR_MESSAGE);
     } finally {
       setIsPending(false);
     }
