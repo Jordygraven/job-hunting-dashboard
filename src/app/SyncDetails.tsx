@@ -6,8 +6,24 @@ export function pluralize(count: number, singular: string): string {
   return `${count} ${singular}${count === 1 ? "" : "s"}`;
 }
 
-function DetailList({ title, items }: { title: string; items: SyncRunDetail[] }) {
-  if (items.length === 0) return null;
+function DetailList({
+  title,
+  items,
+  emptyMessage,
+}: {
+  title: string;
+  items: SyncRunDetail[];
+  emptyMessage?: string;
+}) {
+  if (items.length === 0) {
+    if (!emptyMessage) return null;
+    return (
+      <div className="mt-2">
+        <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">{title}</p>
+        <p className="text-xs text-zinc-600 dark:text-zinc-400">{emptyMessage}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-2">
@@ -38,7 +54,11 @@ function SyncRunRow({ run, open }: { run: SyncRunRecord; open: boolean }) {
       </summary>
       <DetailList title="Failures" items={run.failures} />
       <DetailList title="Parser failures" items={run.parserFailures} />
-      <DetailList title="Warnings" items={run.warningDetails} />
+      <DetailList
+        title="Warnings"
+        items={run.warningDetails}
+        emptyMessage={(run.warnings ?? 0) > 0 ? "Details not recorded for this run." : undefined}
+      />
     </details>
   );
 }
