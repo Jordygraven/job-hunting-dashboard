@@ -127,4 +127,87 @@ describe("getVacancyTabData", () => {
     expect(result.filteredCount).toBe(1);
     expect(result.counts.ignored).toBe(2);
   });
+
+  test("q narrows rows on every tab, partial and case-insensitive", async () => {
+    getVacanciesMock.mockResolvedValue(VACANCIES);
+    getVacancyStatusesMock.mockResolvedValue(new Map());
+
+    const result = await getVacancyTabData({ view: "all", q: "CO B" });
+
+    expect(result.rows.map((r) => r.id)).toEqual([2]);
+    expect(result.q).toBe("co b");
+  });
+
+  test("company is an exact match; a non-existent company yields zero rows, not an error", async () => {
+    getVacanciesMock.mockResolvedValue(VACANCIES);
+    getVacancyStatusesMock.mockResolvedValue(new Map());
+
+    const exact = await getVacancyTabData({ view: "all", company: "Co B" });
+    expect(exact.rows.map((r) => r.id)).toEqual([2]);
+
+    const missing = await getVacancyTabData({ view: "all", company: "Nope Inc" });
+    expect(missing.rows).toEqual([]);
+    expect(missing.filteredCount).toBe(0);
+  });
+
+  test("from/to narrow by the KL calendar day of firstSeenAt; from after to yields zero rows", async () => {
+    getVacanciesMock.mockResolvedValue(VACANCIES);
+    getVacancyStatusesMock.mockResolvedValue(new Map());
+
+    const inRange = await getVacancyTabData({ view: "all", from: "2026-10-02", to: "2026-10-03" });
+    expect(inRange.rows.map((r) => r.id).sort()).toEqual([1, 2]);
+
+    const empty = await getVacancyTabData({ view: "all", from: "2026-10-05", to: "2026-10-01" });
+    expect(empty.rows).toEqual([]);
+  });
+
+  test("counts add up with company filter active, ignoring status and reason", async () => {
+    getVacanciesMock.mockResolvedValue(VACANCIES);
+    getVacancyStatusesMock.mockResolvedValue(
+      new Map([
+        [2, { status: "ignored", reason: "language", date: "2026-10-02" }],
+        [3, { status: "applied", appliedOn: "2026-10-01" }],
+      ])
+    );
+
+    const result = await getVacancyTabData({ view: "ignored", reason: "language", company: "Co A" });
+
+    expect(result.counts).toEqual({ todo: 1, applied: 0, ignored: 0, all: 1 });
+    expect(result.counts.todo + result.counts.applied + result.counts.ignored).toBe(result.counts.all);
+  });
+
+  test("status only narrows rows on the all tab; it's a no-op elsewhere", async () => {
+    getVacanciesMock.mockResolvedValue(VACANCIES);
+    getVacancyStatusesMock.mockResolvedValue(
+      new Map([[2, { status: "applied", appliedOn: "2026-10-02" }]])
+    );
+
+    const onAll = await getVacancyTabData({ view: "all", status: "applied" });
+    expect(onAll.rows.map((r) => r.id)).toEqual([2]);
+    expect(onAll.statusFilter).toBe("applied");
+
+    const onTodo = await getVacancyTabData({ view: "todo", status: "applied" });
+    expect(onTodo.statusFilter).toBeNull();
+    expect(onTodo.rows.map((r) => r.id).sort()).toEqual([1, 3]);
+  });
+
+  test("companies lists every distinct company across all vacancies, regardless of active filters", async () => {
+    getVacanciesMock.mockResolvedValue(VACANCIES);
+    getVacancyStatusesMock.mockResolvedValue(new Map());
+
+    const result = await getVacancyTabData({ view: "all", company: "Co A" });
+
+    expect(result.companies).toEqual(["Co A", "Co B", "Co C"]);
+  });
+
+  test("hasActiveFilters is false with no params, true when any filter is set", async () => {
+    getVacanciesMock.mockResolvedValue(VACANCIES);
+    getVacancyStatusesMock.mockResolvedValue(new Map());
+
+    expect((await getVacancyTabData({})).hasActiveFilters).toBe(false);
+    expect((await getVacancyTabData({ q: "a" })).hasActiveFilters).toBe(true);
+    expect((await getVacancyTabData({ company: "Co A" })).hasActiveFilters).toBe(true);
+    expect((await getVacancyTabData({ from: "2026-10-01" })).hasActiveFilters).toBe(true);
+    expect((await getVacancyTabData({ view: "all", status: "todo" })).hasActiveFilters).toBe(true);
+  });
 });
