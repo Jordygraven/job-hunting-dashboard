@@ -24,11 +24,14 @@ export interface SyncResult {
 
 export class SyncDatabaseError extends Error {}
 
+function hasMessage(error: unknown): error is { message: unknown } {
+  return typeof error === "object" && error !== null && "message" in error;
+}
+
 function reasonFor(error: unknown): string {
   if (error instanceof Error) return error.message;
-  if (error && typeof error === "object" && "message" in error) {
-    const msg = (error as any).message;
-    return typeof msg === "string" ? msg : "unknown error";
+  if (hasMessage(error)) {
+    return typeof error.message === "string" ? error.message : "unknown error";
   }
   return "unknown error";
 }

@@ -8,8 +8,6 @@
 
 ## Epic 3 (dashboard) deferred Minor findings — 6 Oct
 
-- Task 1 (runSync): `reasonFor()`'s plain-object branch uses an `as any` cast instead of a narrower type guard — `src/lib/sync/runSync.ts`.
-- Task 1 (runSync): no test for "some individual messages fail, overall run still succeeds" — `src/lib/sync/runSync.test.ts`.
 - Task 2 (Basic Auth): the `Basic ` scheme check is case-sensitive, though RFC 7235 scheme names aren't — `src/lib/auth/basicAuth.ts`.
 - Task 4 (sync status/alert): no test at the exact 26-hour stale boundary (only a 27h "clearly stale" case) — `src/lib/sync/getSyncAlert.test.ts`.
 - Task 4 (sync status/alert): the 26-hour threshold is duplicated as a magic number between the constant and a hardcoded UI string — `src/lib/sync/getSyncAlert.ts` / `src/app/page.tsx`.

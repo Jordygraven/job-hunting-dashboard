@@ -89,6 +89,39 @@ describe("runSync success", () => {
     expect(row.started_at).toBeTypeOf("string");
     expect(row.finished_at).toBeTypeOf("string");
   });
+
+  test("some individual messages fail, overall run still succeeds", async () => {
+    fromMock.mockImplementation((table: string) =>
+      table === "vacancies"
+        ? upsertTable({ data: [{ id: 1 }], error: null })
+        : syncRunsTable()
+    );
+    fetchLinkedInAlertsMock.mockResolvedValue([
+      { id: "m1", threadId: "t1", date: "", subject: "" },
+      { id: "m2", threadId: "t2", date: "", subject: "" },
+    ]);
+    fetchMessageContentMock.mockImplementation((id: string) => {
+      if (id === "m2") return Promise.reject(new Error("fetch timeout"));
+      return Promise.resolve({ id: "m1", internalDate: "1000", text: "body" });
+    });
+    parseLinkedInAlertMock.mockReturnValue({
+      cards: [{ jobId: "1", title: "Widget Engineer", company: "Acme", location: "Remote", url: "https://x" }],
+      warnings: [],
+      failures: [],
+    });
+
+    const result = await runSync("cron");
+
+    expect(result.inserted).toBe(1);
+    expect(result.failures).toEqual([{ messageId: "m2", jobId: null, reason: "fetch timeout" }]);
+
+    expect(insertMock).toHaveBeenCalledTimes(1);
+    expect(insertMock.mock.calls[0][0]).toMatchObject({
+      status: "ok",
+      inserted: 1,
+      failures: [{ messageId: "m2", jobId: null, reason: "fetch timeout" }],
+    });
+  });
 });
 
 describe("runSync crash before any message is fetched", () => {
