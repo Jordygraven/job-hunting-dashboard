@@ -86,3 +86,37 @@ export function countByView(rows: VacancyTabRow[]): VacancyTabCounts {
     all: rows.length,
   };
 }
+
+export type ShowParam = 10 | 20 | "all";
+
+export function resolveShow(value: string | string[] | undefined): ShowParam {
+  const candidate = firstOf(value);
+  if (candidate === "20") {
+    return 20;
+  }
+  if (candidate === "all") {
+    return "all";
+  }
+  return 10;
+}
+
+export function sliceRowsForShow(rows: VacancyTabRow[], show: ShowParam): VacancyTabRow[] {
+  return show === "all" ? rows : rows.slice(0, show);
+}
+
+export function describeShownRows(
+  filteredCount: number,
+  show: ShowParam
+): { shown: number; total: number; more: { label: string; show: "20" | "all" } | null } | null {
+  if (filteredCount <= 10) {
+    return null;
+  }
+  const shown = show === "all" ? filteredCount : Math.min(show, filteredCount);
+  if (shown >= filteredCount) {
+    return { shown: filteredCount, total: filteredCount, more: null };
+  }
+  if (show === 10) {
+    return { shown, total: filteredCount, more: { label: "Read more", show: "20" } };
+  }
+  return { shown, total: filteredCount, more: { label: `Show all (${filteredCount})`, show: "all" } };
+}

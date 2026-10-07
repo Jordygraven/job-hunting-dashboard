@@ -1,20 +1,19 @@
 import { formatKlDate } from "@/lib/format/kualaLumpurTime";
 import type { VacancyTabRow, VacancyTabView } from "@/lib/vacancyActions/vacancyTabs";
-import type { IgnoreReason } from "@/lib/vacancyActions/types";
+import { REASON_LABELS } from "@/lib/vacancyActions/validation";
 import { VacancyActions } from "./VacancyActions";
-
-const REASON_LABELS: Record<IgnoreReason, string> = {
-  language: "Language",
-  location: "Location",
-  seniority: "Seniority",
-  other: "Other",
-};
 
 const EMPTY_STATE_TEXT: Record<VacancyTabView, string> = {
   todo: "No vacancies to triage.",
   applied: "No applied vacancies yet.",
   ignored: "No ignored vacancies yet.",
   all: "No vacancies yet.",
+};
+
+const STATUS_LABELS: Record<VacancyTabRow["status"], string> = {
+  todo: "To do",
+  applied: "Applied",
+  ignored: "Ignored",
 };
 
 export function VacancyTable({ view, rows }: { view: VacancyTabView; rows: VacancyTabRow[] }) {
@@ -70,7 +69,7 @@ export function VacancyTable({ view, rows }: { view: VacancyTabView; rows: Vacan
                 </td>
               </>
             )}
-            {view === "all" && <td className="py-2 pr-4 capitalize">{row.status}</td>}
+            {view === "all" && <td className="py-2 pr-4">{STATUS_LABELS[row.status]}</td>}
             <td className="py-2 pr-4">
               <VacancyActions vacancyId={row.id} status={row.status} />
             </td>

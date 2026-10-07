@@ -1,7 +1,14 @@
 import { isDateNotInFutureKl, isValidDateString } from "@/lib/format/kualaLumpurDate";
 import type { IgnoreReason } from "./types";
 
-export const IGNORE_REASONS: readonly IgnoreReason[] = ["language", "location", "seniority", "other"];
+export const IGNORE_REASONS = ["language", "interest", "seniority", "other"] as const satisfies readonly IgnoreReason[];
+
+export const REASON_LABELS: Record<(typeof IGNORE_REASONS)[number], string> = {
+  language: "Language",
+  interest: "Interest",
+  seniority: "Seniority",
+  other: "Other",
+};
 
 export function isValidVacancyId(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value > 0;

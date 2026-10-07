@@ -2,9 +2,12 @@ import { describe, expect, test } from "vitest";
 import {
   buildVacancyTabRow,
   countByView,
+  describeShownRows,
   resolveReasonFilter,
+  resolveShow,
   resolveView,
   selectRowsForView,
+  sliceRowsForShow,
   type VacancyTabRow,
 } from "./vacancyTabs";
 import type { Vacancy } from "@/lib/vacancies/getVacancies";
@@ -69,7 +72,7 @@ describe("resolveReasonFilter", () => {
 
   test("accepts each known reason and 'none' on the ignored tab", () => {
     expect(resolveReasonFilter("ignored", "language")).toBe("language");
-    expect(resolveReasonFilter("ignored", "location")).toBe("location");
+    expect(resolveReasonFilter("ignored", "interest")).toBe("interest");
     expect(resolveReasonFilter("ignored", "seniority")).toBe("seniority");
     expect(resolveReasonFilter("ignored", "other")).toBe("other");
     expect(resolveReasonFilter("ignored", "none")).toBe("none");
@@ -95,9 +98,9 @@ describe("buildVacancyTabRow", () => {
   });
 
   test("ignored status carries ignoredOn and reason (possibly null)", () => {
-    const status: VacancyStatus = { status: "ignored", reason: "location", date: "2026-10-03" };
+    const status: VacancyStatus = { status: "ignored", reason: "interest", date: "2026-10-03" };
     expect(buildVacancyTabRow(vacancy(), status)).toEqual(
-      tabRow({ status: "ignored", ignoredOn: "2026-10-03", ignoreReason: "location" })
+      tabRow({ status: "ignored", ignoredOn: "2026-10-03", ignoreReason: "interest" })
     );
   });
 });
@@ -146,5 +149,92 @@ describe("countByView", () => {
 
   test("all-zero counts for an empty vacancy list", () => {
     expect(countByView([])).toEqual({ todo: 0, applied: 0, ignored: 0, all: 0 });
+  });
+});
+
+describe("resolveShow", () => {
+  test("defaults to 10 when absent", () => {
+    expect(resolveShow(undefined)).toBe(10);
+  });
+
+  test("accepts 20 and all", () => {
+    expect(resolveShow("20")).toBe(20);
+    expect(resolveShow("all")).toBe("all");
+  });
+
+  test("falls back to 10 for any other value", () => {
+    expect(resolveShow("bogus")).toBe(10);
+    expect(resolveShow("200")).toBe(10);
+  });
+
+  test("takes the first element when given an array", () => {
+    expect(resolveShow(["20", "all"])).toBe(20);
+    expect(resolveShow(["bogus"])).toBe(10);
+  });
+});
+
+describe("sliceRowsForShow", () => {
+  const rows = [tabRow({ id: 1 }), tabRow({ id: 2 }), tabRow({ id: 3 })];
+
+  test("show=10 slices to the first 10 (or fewer)", () => {
+    expect(sliceRowsForShow(rows, 10).map((r) => r.id)).toEqual([1, 2, 3]);
+  });
+
+  test("show=20 slices to the first 20", () => {
+    expect(sliceRowsForShow(rows, 20).map((r) => r.id)).toEqual([1, 2, 3]);
+  });
+
+  test("show='all' returns every row", () => {
+    expect(sliceRowsForShow(rows, "all")).toEqual(rows);
+  });
+
+  test("returns an empty array for an empty list", () => {
+    expect(sliceRowsForShow([], 10)).toEqual([]);
+  });
+});
+
+describe("describeShownRows", () => {
+  test("returns null for 0 rows (nothing to report)", () => {
+    expect(describeShownRows(0, 10)).toBeNull();
+  });
+
+  test("returns null at exactly 10 rows (not 'more than 10')", () => {
+    expect(describeShownRows(10, 10)).toBeNull();
+  });
+
+  test("15 total, show=10: Read more to show=20", () => {
+    expect(describeShownRows(15, 10)).toEqual({
+      shown: 10,
+      total: 15,
+      more: { label: "Read more", show: "20" },
+    });
+  });
+
+  test("15 total, show=20: every row visible, no link", () => {
+    expect(describeShownRows(15, 20)).toEqual({ shown: 15, total: 15, more: null });
+  });
+
+  test("20 total, show=10: Read more to show=20", () => {
+    expect(describeShownRows(20, 10)).toEqual({
+      shown: 10,
+      total: 20,
+      more: { label: "Read more", show: "20" },
+    });
+  });
+
+  test("20 total, show=20: every row visible, no link", () => {
+    expect(describeShownRows(20, 20)).toEqual({ shown: 20, total: 20, more: null });
+  });
+
+  test("21 total, show=20: Show all (21) link", () => {
+    expect(describeShownRows(21, 20)).toEqual({
+      shown: 20,
+      total: 21,
+      more: { label: "Show all (21)", show: "all" },
+    });
+  });
+
+  test("21 total, show='all': every row visible, no link", () => {
+    expect(describeShownRows(21, "all")).toEqual({ shown: 21, total: 21, more: null });
   });
 });

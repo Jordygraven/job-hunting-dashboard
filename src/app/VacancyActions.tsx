@@ -3,20 +3,15 @@
 
 import { useState } from "react";
 import { apply, ignore, undo } from "./actions";
-import { IGNORE_REASONS } from "@/lib/vacancyActions/validation";
+import { IGNORE_REASONS, REASON_LABELS } from "@/lib/vacancyActions/validation";
+import { SAFE_ERROR_MESSAGE } from "@/lib/vacancyActions/errors";
 import type { IgnoreReason } from "@/lib/vacancyActions/types";
-
-const GENERIC_ERROR = "Something went wrong. Please try again.";
-
-const REASON_LABELS: Record<IgnoreReason, string> = {
-  language: "Language",
-  location: "Location",
-  seniority: "Seniority",
-  other: "Other",
-};
 
 type VacancyRowStatus = "todo" | "applied" | "ignored";
 type ActionResult = { ok: true } | { ok: false; error: string };
+
+const CONTROL_CLASS =
+  "rounded-full border border-black px-3 py-1 text-sm transition-colors hover:bg-black hover:text-white disabled:pointer-events-none disabled:opacity-40 dark:border-white dark:hover:bg-white dark:hover:text-black";
 
 export function VacancyActions({
   vacancyId,
@@ -27,6 +22,7 @@ export function VacancyActions({
 }) {
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reasonValue, setReasonValue] = useState<IgnoreReason | "">("");
 
   async function run(action: () => Promise<ActionResult>) {
     setIsPending(true);
@@ -37,17 +33,18 @@ export function VacancyActions({
         setError(result.error);
       }
     } catch {
-      setError(GENERIC_ERROR);
+      setError(SAFE_ERROR_MESSAGE);
     } finally {
       setIsPending(false);
     }
   }
 
-  function handleReasonChange(event: React.ChangeEvent<HTMLSelectElement>) {
+  async function handleReasonChange(event: React.ChangeEvent<HTMLSelectElement>) {
     const reason = event.target.value as IgnoreReason | "";
-    event.target.value = "";
+    setReasonValue(reason);
     if (reason) {
-      run(() => ignore(vacancyId, reason));
+      await run(() => ignore(vacancyId, reason));
+      setReasonValue("");
     }
   }
 
@@ -55,20 +52,31 @@ export function VacancyActions({
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-2">
         {status === "todo" && (
-          <button type="button" disabled={isPending} onClick={() => run(() => apply(vacancyId))}>
+          <button
+            type="button"
+            className={CONTROL_CLASS}
+            disabled={isPending}
+            onClick={() => run(() => apply(vacancyId))}
+          >
             Applied
           </button>
         )}
 
         {(status === "todo" || status === "applied") && (
           <>
-            <button type="button" disabled={isPending} onClick={() => run(() => ignore(vacancyId))}>
+            <button
+              type="button"
+              className={CONTROL_CLASS}
+              disabled={isPending}
+              onClick={() => run(() => ignore(vacancyId))}
+            >
               Ignore
             </button>
             <select
               aria-label="Ignore with reason"
+              className={CONTROL_CLASS}
               disabled={isPending}
-              value=""
+              value={reasonValue}
               onChange={handleReasonChange}
             >
               <option value="">Ignore with reason</option>
@@ -82,7 +90,12 @@ export function VacancyActions({
         )}
 
         {(status === "applied" || status === "ignored") && (
-          <button type="button" disabled={isPending} onClick={() => run(() => undo(vacancyId))}>
+          <button
+            type="button"
+            className={CONTROL_CLASS}
+            disabled={isPending}
+            onClick={() => run(() => undo(vacancyId))}
+          >
             Undo
           </button>
         )}

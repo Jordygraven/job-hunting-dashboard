@@ -9,6 +9,7 @@ import { formatKlDateTime } from "@/lib/format/kualaLumpurTime";
 import { SyncButton } from "./SyncButton";
 import { VacancyTabs } from "./VacancyTabs";
 import { VacancyTable } from "./VacancyTable";
+import { VacancyPagination } from "./VacancyPagination";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,7 @@ export default async function Home({
   searchParams: Promise<VacancyTabSearchParams>;
 }) {
   const params = await searchParams;
-  const [{ view, reasonFilter, counts, rows }, latestRun] = await Promise.all([
+  const [{ view, reasonFilter, counts, rows, show, filteredCount }, latestRun] = await Promise.all([
     getVacancyTabData(params),
     getLatestSyncRun(),
   ]);
@@ -85,8 +86,9 @@ export default async function Home({
         </section>
 
         <section>
-          <VacancyTabs view={view} counts={counts} reasonFilter={reasonFilter} />
+          <VacancyTabs view={view} counts={counts} reasonFilter={reasonFilter} show={show} />
           <VacancyTable view={view} rows={rows} />
+          <VacancyPagination view={view} reasonFilter={reasonFilter} show={show} filteredCount={filteredCount} />
         </section>
       </main>
     </div>

@@ -5,6 +5,7 @@ import { getKlDateString } from "@/lib/format/kualaLumpurDate";
 import { deriveVacancyStatus } from "./deriveVacancyStatus";
 import type { IgnoreReason, VacancyActionRow } from "./types";
 import { isValidAppliedOnDate, isValidIgnoreReason, isValidVacancyId } from "./validation";
+import { SAFE_ERROR_MESSAGE } from "./errors";
 
 export type WriteVacancyActionInput =
   | { intent: "apply"; vacancyId: number }
@@ -13,8 +14,6 @@ export type WriteVacancyActionInput =
   | { intent: "editAppliedDate"; vacancyId: number; appliedOn: string };
 
 export type WriteVacancyActionResult = { ok: true } | { ok: false; error: string };
-
-const SAFE_DB_ERROR = "Something went wrong. Please try again.";
 
 export async function writeVacancyAction(
   input: WriteVacancyActionInput
@@ -35,7 +34,7 @@ export async function writeVacancyAction(
   try {
     supabase = getSupabaseServerClient();
   } catch {
-    return { ok: false, error: SAFE_DB_ERROR };
+    return { ok: false, error: SAFE_ERROR_MESSAGE };
   }
 
   const { data: vacancy, error: vacancyError } = await supabase
@@ -45,7 +44,7 @@ export async function writeVacancyAction(
     .maybeSingle();
 
   if (vacancyError) {
-    return { ok: false, error: SAFE_DB_ERROR };
+    return { ok: false, error: SAFE_ERROR_MESSAGE };
   }
   if (!vacancy) {
     return { ok: false, error: "Vacancy not found." };
@@ -58,7 +57,7 @@ export async function writeVacancyAction(
     .order("id", { ascending: true });
 
   if (fetchError) {
-    return { ok: false, error: SAFE_DB_ERROR };
+    return { ok: false, error: SAFE_ERROR_MESSAGE };
   }
 
   const rows: VacancyActionRow[] = (actionRows ?? []).map((row: any) => ({
@@ -102,7 +101,7 @@ export async function writeVacancyAction(
   const { error: insertError } = await supabase.from("vacancy_actions").insert(insertRow);
 
   if (insertError) {
-    return { ok: false, error: SAFE_DB_ERROR };
+    return { ok: false, error: SAFE_ERROR_MESSAGE };
   }
 
   return { ok: true };

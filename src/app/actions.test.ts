@@ -42,8 +42,8 @@ describe("apply", () => {
 describe("ignore", () => {
   test("passes the reason through when given", async () => {
     writeVacancyActionMock.mockResolvedValue({ ok: true });
-    await ignore(2, "location");
-    expect(writeVacancyActionMock).toHaveBeenCalledWith({ intent: "ignore", vacancyId: 2, reason: "location" });
+    await ignore(2, "interest");
+    expect(writeVacancyActionMock).toHaveBeenCalledWith({ intent: "ignore", vacancyId: 2, reason: "interest" });
     expect(revalidatePathMock).toHaveBeenCalledWith("/");
   });
 
