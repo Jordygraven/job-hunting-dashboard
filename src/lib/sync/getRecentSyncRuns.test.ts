@@ -96,11 +96,11 @@ describe("mapSyncRunRow", () => {
 });
 
 describe("getRecentSyncRuns", () => {
-  test("queries the last 10 runs ordered newest first", async () => {
+  test("queries the last 10 runs ordered newest first by id", async () => {
     await getRecentSyncRuns();
 
     expect(fromMock).toHaveBeenCalledWith("sync_runs");
-    expect(orderMock).toHaveBeenCalledWith("created_at", { ascending: false });
+    expect(orderMock).toHaveBeenCalledWith("id", { ascending: false });
     expect(limitMock).toHaveBeenCalledWith(10);
   });
 

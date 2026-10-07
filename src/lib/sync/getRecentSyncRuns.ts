@@ -47,7 +47,7 @@ export async function getRecentSyncRuns(): Promise<SyncRunRecord[]> {
     .select(
       "id, trigger, status, started_at, finished_at, messages, cards, unique_jobs, inserted, skipped, warnings, parser_failure_count, parser_failures, failures, warning_details, error"
     )
-    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
     .limit(RECENT_RUNS_LIMIT);
 
   if (error) {
