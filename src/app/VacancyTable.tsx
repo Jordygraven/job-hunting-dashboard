@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { formatKlDate } from "@/lib/format/kualaLumpurTime";
-import type { VacancyTabRow, VacancyTabView } from "@/lib/vacancyActions/vacancyTabs";
+import { STATUS_LABELS, type VacancyTabRow, type VacancyTabView } from "@/lib/vacancyActions/vacancyTabs";
 import { REASON_LABELS } from "@/lib/vacancyActions/validation";
 import { VacancyActions } from "./VacancyActions";
 
@@ -10,14 +11,28 @@ const EMPTY_STATE_TEXT: Record<VacancyTabView, string> = {
   all: "No vacancies yet.",
 };
 
-const STATUS_LABELS: Record<VacancyTabRow["status"], string> = {
-  todo: "To do",
-  applied: "Applied",
-  ignored: "Ignored",
-};
-
-export function VacancyTable({ view, rows }: { view: VacancyTabView; rows: VacancyTabRow[] }) {
+export function VacancyTable({
+  view,
+  rows,
+  hasActiveFilters,
+  clearFiltersHref,
+}: {
+  view: VacancyTabView;
+  rows: VacancyTabRow[];
+  hasActiveFilters: boolean;
+  clearFiltersHref: string;
+}) {
   if (rows.length === 0) {
+    if (hasActiveFilters) {
+      return (
+        <p className="text-zinc-600 dark:text-zinc-400">
+          No vacancies match.{" "}
+          <Link href={clearFiltersHref} className="underline">
+            Clear filters
+          </Link>
+        </p>
+      );
+    }
     return <p className="text-zinc-600 dark:text-zinc-400">{EMPTY_STATE_TEXT[view]}</p>;
   }
 

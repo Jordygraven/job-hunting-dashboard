@@ -6,7 +6,9 @@ import {
 import { getLatestSyncRun } from "@/lib/sync/getLatestSyncRun";
 import { getSyncAlert, type AlertReason } from "@/lib/sync/getSyncAlert";
 import { formatKlDateTime } from "@/lib/format/kualaLumpurTime";
+import { buildVacancyHref } from "@/lib/vacancyActions/vacancyLinks";
 import { SyncButton } from "./SyncButton";
+import { VacancyFilterBar } from "./VacancyFilterBar";
 import { VacancyTabs } from "./VacancyTabs";
 import { VacancyTable } from "./VacancyTable";
 import { VacancyPagination } from "./VacancyPagination";
@@ -38,11 +40,12 @@ export default async function Home({
   searchParams: Promise<VacancyTabSearchParams>;
 }) {
   const params = await searchParams;
-  const [{ view, reasonFilter, counts, rows, show, filteredCount }, latestRun] = await Promise.all([
-    getVacancyTabData(params),
-    getLatestSyncRun(),
-  ]);
+  const [
+    { view, reasonFilter, statusFilter, counts, rows, show, filteredCount, q, company, from, to, companies, hasActiveFilters },
+    latestRun,
+  ] = await Promise.all([getVacancyTabData(params), getLatestSyncRun()]);
   const alerts = getSyncAlert(latestRun, new Date());
+  const clearFiltersHref = buildVacancyHref({ view, reasonFilter });
 
   return (
     <div className="flex flex-col flex-1 bg-zinc-50 font-sans dark:bg-black">
@@ -86,9 +89,45 @@ export default async function Home({
         </section>
 
         <section>
-          <VacancyTabs view={view} counts={counts} reasonFilter={reasonFilter} show={show} />
-          <VacancyTable view={view} rows={rows} />
-          <VacancyPagination view={view} reasonFilter={reasonFilter} show={show} filteredCount={filteredCount} />
+          <VacancyFilterBar
+            view={view}
+            reasonFilter={reasonFilter}
+            q={q}
+            company={company}
+            from={from}
+            to={to}
+            status={statusFilter}
+            companies={companies}
+            hasActiveFilters={hasActiveFilters}
+          />
+          <VacancyTabs
+            view={view}
+            counts={counts}
+            reasonFilter={reasonFilter}
+            status={statusFilter}
+            show={show}
+            q={q}
+            company={company}
+            from={from}
+            to={to}
+          />
+          <VacancyTable
+            view={view}
+            rows={rows}
+            hasActiveFilters={hasActiveFilters}
+            clearFiltersHref={clearFiltersHref}
+          />
+          <VacancyPagination
+            view={view}
+            reasonFilter={reasonFilter}
+            status={statusFilter}
+            show={show}
+            filteredCount={filteredCount}
+            q={q}
+            company={company}
+            from={from}
+            to={to}
+          />
         </section>
       </main>
     </div>

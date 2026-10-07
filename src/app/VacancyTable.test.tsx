@@ -9,6 +9,8 @@ afterEach(() => {
   cleanup();
 });
 
+const NO_FILTERS = { hasActiveFilters: false, clearFiltersHref: "/?view=todo" };
+
 function row(overrides: Partial<VacancyTabRow> = {}): VacancyTabRow {
   return {
     id: 1,
@@ -27,40 +29,55 @@ function row(overrides: Partial<VacancyTabRow> = {}): VacancyTabRow {
 
 describe("VacancyTable — empty states", () => {
   test("shows the todo empty state", () => {
-    render(<VacancyTable view="todo" rows={[]} />);
+    render(<VacancyTable view="todo" rows={[]} {...NO_FILTERS} />);
     expect(screen.getByText("No vacancies to triage.")).toBeInTheDocument();
   });
 
   test("shows the applied empty state", () => {
-    render(<VacancyTable view="applied" rows={[]} />);
+    render(<VacancyTable view="applied" rows={[]} {...NO_FILTERS} />);
     expect(screen.getByText("No applied vacancies yet.")).toBeInTheDocument();
   });
 
   test("shows the ignored empty state", () => {
-    render(<VacancyTable view="ignored" rows={[]} />);
+    render(<VacancyTable view="ignored" rows={[]} {...NO_FILTERS} />);
     expect(screen.getByText("No ignored vacancies yet.")).toBeInTheDocument();
   });
 
   test("shows the all empty state", () => {
-    render(<VacancyTable view="all" rows={[]} />);
+    render(<VacancyTable view="all" rows={[]} {...NO_FILTERS} />);
     expect(screen.getByText("No vacancies yet.")).toBeInTheDocument();
+  });
+
+  test("shows 'No vacancies match' plus a Clear filters link when a filter is active and nothing matches", () => {
+    render(
+      <VacancyTable view="todo" rows={[]} hasActiveFilters={true} clearFiltersHref="/?view=todo" />
+    );
+    expect(screen.getByText(/No vacancies match\./)).toBeInTheDocument();
+    expect(screen.queryByText("No vacancies to triage.")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Clear filters" })).toHaveAttribute("href", "/?view=todo");
   });
 });
 
 describe("VacancyTable — row rendering", () => {
   test("renders a null location as an empty cell, not a crash or the word null", () => {
-    render(<VacancyTable view="todo" rows={[row({ location: null })]} />);
+    render(<VacancyTable view="todo" rows={[row({ location: null })]} {...NO_FILTERS} />);
     expect(screen.getByText("Engineer")).toBeInTheDocument();
     expect(screen.queryByText("null")).not.toBeInTheDocument();
   });
 
   test("column headers have scope=col", () => {
-    render(<VacancyTable view="todo" rows={[row()]} />);
+    render(<VacancyTable view="todo" rows={[row()]} {...NO_FILTERS} />);
     expect(screen.getByRole("columnheader", { name: "Title" })).toHaveAttribute("scope", "col");
   });
 
   test("the applied tab adds an Applied on column", () => {
-    render(<VacancyTable view="applied" rows={[row({ status: "applied", appliedOn: "2026-10-02" })]} />);
+    render(
+      <VacancyTable
+        view="applied"
+        rows={[row({ status: "applied", appliedOn: "2026-10-02" })]}
+        {...NO_FILTERS}
+      />
+    );
     expect(screen.getByRole("columnheader", { name: "Applied on" })).toBeInTheDocument();
   });
 
@@ -69,6 +86,7 @@ describe("VacancyTable — row rendering", () => {
       <VacancyTable
         view="ignored"
         rows={[row({ status: "ignored", ignoredOn: "2026-10-02", ignoreReason: "interest" })]}
+        {...NO_FILTERS}
       />
     );
     expect(screen.getByRole("columnheader", { name: "Ignored on" })).toBeInTheDocument();
@@ -77,12 +95,12 @@ describe("VacancyTable — row rendering", () => {
   });
 
   test("the all tab adds a Status column", () => {
-    render(<VacancyTable view="all" rows={[row({ status: "ignored" })]} />);
+    render(<VacancyTable view="all" rows={[row({ status: "ignored" })]} {...NO_FILTERS} />);
     expect(screen.getByRole("columnheader", { name: "Status" })).toBeInTheDocument();
   });
 
   test("the all tab's status cell reads 'To do', matching the tab label, not raw 'todo'", () => {
-    render(<VacancyTable view="all" rows={[row({ status: "todo" })]} />);
+    render(<VacancyTable view="all" rows={[row({ status: "todo" })]} {...NO_FILTERS} />);
     expect(screen.getByRole("cell", { name: "To do" })).toBeInTheDocument();
   });
 });
