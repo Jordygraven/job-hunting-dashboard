@@ -19,6 +19,7 @@ export function VacancyActions({
 }) {
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reasonValue, setReasonValue] = useState<IgnoreReason | "">("");
 
   async function run(action: () => Promise<ActionResult>) {
     setIsPending(true);
@@ -35,11 +36,12 @@ export function VacancyActions({
     }
   }
 
-  function handleReasonChange(event: React.ChangeEvent<HTMLSelectElement>) {
+  async function handleReasonChange(event: React.ChangeEvent<HTMLSelectElement>) {
     const reason = event.target.value as IgnoreReason | "";
-    event.target.value = "";
+    setReasonValue(reason);
     if (reason) {
-      run(() => ignore(vacancyId, reason));
+      await run(() => ignore(vacancyId, reason));
+      setReasonValue("");
     }
   }
 
@@ -60,7 +62,7 @@ export function VacancyActions({
             <select
               aria-label="Ignore with reason"
               disabled={isPending}
-              value=""
+              value={reasonValue}
               onChange={handleReasonChange}
             >
               <option value="">Ignore with reason</option>
