@@ -32,7 +32,7 @@ export function VacancyPagination({
   }
 
   return (
-    <div className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">
+    <div className="mt-3 text-left text-sm text-zinc-600 dark:text-zinc-400">
       <p>
         Showing {summary.shown} of {summary.total}
       </p>
