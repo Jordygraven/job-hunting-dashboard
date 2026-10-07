@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { VacancyTabCounts, VacancyTabView } from "@/lib/vacancyActions/vacancyTabs";
+import type { ShowParam, VacancyTabCounts, VacancyTabView } from "@/lib/vacancyActions/vacancyTabs";
 import type { IgnoreReason } from "@/lib/vacancyActions/types";
 
 const TABS: { view: VacancyTabView; label: string }[] = [
@@ -18,22 +18,41 @@ const REASON_FILTERS: { value: string | null; label: string }[] = [
   { value: "none", label: "No reason" },
 ];
 
-function tabHref(view: VacancyTabView): string {
-  return `/?view=${view}`;
+function showQuery(show: ShowParam): string | null {
+  return show === 10 ? null : String(show);
 }
 
-function reasonHref(reasonValue: string | null): string {
-  return reasonValue ? `/?view=ignored&reason=${reasonValue}` : "/?view=ignored";
+function tabHref(view: VacancyTabView, show: ShowParam): string {
+  const params = new URLSearchParams({ view });
+  const showValue = showQuery(show);
+  if (showValue) {
+    params.set("show", showValue);
+  }
+  return `/?${params.toString()}`;
+}
+
+function reasonHref(reasonValue: string | null, show: ShowParam): string {
+  const params = new URLSearchParams({ view: "ignored" });
+  if (reasonValue) {
+    params.set("reason", reasonValue);
+  }
+  const showValue = showQuery(show);
+  if (showValue) {
+    params.set("show", showValue);
+  }
+  return `/?${params.toString()}`;
 }
 
 export function VacancyTabs({
   view,
   counts,
   reasonFilter,
+  show,
 }: {
   view: VacancyTabView;
   counts: VacancyTabCounts;
   reasonFilter: IgnoreReason | "none" | null;
+  show: ShowParam;
 }) {
   return (
     <>
@@ -41,7 +60,7 @@ export function VacancyTabs({
         {TABS.map((tab) => (
           <Link
             key={tab.view}
-            href={tabHref(tab.view)}
+            href={tabHref(tab.view, show)}
             aria-current={view === tab.view ? "page" : undefined}
             className={`pb-2 text-sm ${
               view === tab.view
@@ -59,7 +78,7 @@ export function VacancyTabs({
           {REASON_FILTERS.map((filter) => (
             <Link
               key={filter.label}
-              href={reasonHref(filter.value)}
+              href={reasonHref(filter.value, show)}
               aria-current={reasonFilter === filter.value ? "page" : undefined}
               className={
                 reasonFilter === filter.value
