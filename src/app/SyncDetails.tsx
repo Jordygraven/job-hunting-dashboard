@@ -15,7 +15,7 @@ function DetailList({ title, items }: { title: string; items: SyncRunDetail[] })
       <ul className="list-disc pl-4 text-xs text-zinc-600 dark:text-zinc-400">
         {items.map((item, index) => (
           <li key={index}>
-            {item.messageId} · {item.jobId ?? "—"} · {item.reason}
+            {item.messageId} · {item.jobId ?? "-"} · {item.reason}
           </li>
         ))}
       </ul>
@@ -30,10 +30,10 @@ function SyncRunRow({ run, open }: { run: SyncRunRecord; open: boolean }) {
       className="border-t border-zinc-200 py-2 first:border-t-0 dark:border-zinc-800"
     >
       <summary className="cursor-pointer text-sm text-zinc-700 dark:text-zinc-300">
-        {formatKlDateTime(run.finishedAt)} ({run.trigger}) — {run.status} —{" "}
-        {run.inserted ?? 0} inserted — {run.skipped ?? 0} skipped —{" "}
-        {pluralize(run.warnings ?? 0, "warning")} —{" "}
-        {pluralize(run.parserFailureCount ?? 0, "parser failure")} —{" "}
+        {formatKlDateTime(run.finishedAt)} ({run.trigger}) · {run.status} ·{" "}
+        {run.inserted ?? 0} inserted · {run.skipped ?? 0} skipped ·{" "}
+        {pluralize(run.warnings ?? 0, "warning")} ·{" "}
+        {pluralize(run.parserFailureCount ?? 0, "parser failure")} ·{" "}
         {pluralize(run.failures.length, "failure")}
       </summary>
       <DetailList title="Failures" items={run.failures} />

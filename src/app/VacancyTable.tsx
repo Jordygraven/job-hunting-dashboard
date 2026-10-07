@@ -87,7 +87,7 @@ export function VacancyTable({
                     {row.ignoredOn ? formatKlDate(row.ignoredOn) : ""}
                   </td>
                   <td className="py-2 pr-4">
-                    {row.ignoreReason ? REASON_LABELS[row.ignoreReason] : "—"}
+                    {row.ignoreReason ? REASON_LABELS[row.ignoreReason] : "-"}
                   </td>
                 </>
               )}
