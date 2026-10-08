@@ -30,7 +30,6 @@
 
 Found during Epic 6's whole-branch review; pre-existing in Epic 5's work, out of scope for Epic 6, deferred here instead of fixed in-place.
 
-- `getVacances.ts`'s keyset-pagination cursor interpolates `after.first_seen_at` raw into a PostgREST `.or()` filter string instead of a parameterized filter, unlike the sibling `getVacancyStatuses.ts`'s safe `.lt("id", after.id)` form — `src/lib/vacancies/getVacancies.ts`.
 - `VacancyFilterBar`'s `formKey` includes `view`, so switching tabs force-remounts the uncontrolled search form and silently discards any text typed into Search but not yet submitted — `src/app/VacancyFilterBar.tsx`.
 - The rule "status filtering only applies on the `all` tab" is hardcoded independently in three places (`vacancyLinks.ts`, `vacancyTabs.ts`'s `resolveStatusFilter`, `VacancyFilterBar.tsx`) instead of defined once.
 - `VacancyTabs`, `VacancyPagination`, and `VacancyFilterBar` each redeclare the identical 7-9 field filter prop bag from scratch instead of sharing one type (e.g. the existing `VacancyHrefParams` in `vacancyLinks.ts`).

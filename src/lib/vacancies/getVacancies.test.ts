@@ -103,7 +103,31 @@ describe("getVacancies", () => {
 
     const lastRowOfPage1 = fullPage[fullPage.length - 1];
     expect(orMock).toHaveBeenCalledWith(
-      `first_seen_at.lt.${lastRowOfPage1.first_seen_at},and(first_seen_at.eq.${lastRowOfPage1.first_seen_at},id.lt.${lastRowOfPage1.id})`
+      `first_seen_at.lt."${lastRowOfPage1.first_seen_at}",and(first_seen_at.eq."${lastRowOfPage1.first_seen_at}",id.lt.${lastRowOfPage1.id})`
+    );
+  });
+
+  test("quotes a cursor timestamp containing + and : so PostgREST doesn't misparse it", async () => {
+    const timestampWithOffset = "2026-10-01T09:00:00.000+08:00";
+    const fullPage = Array.from({ length: SUPABASE_MAX_ROWS }, (_, i) => ({
+      id: SUPABASE_MAX_ROWS - i,
+      title: `Job ${SUPABASE_MAX_ROWS - i}`,
+      company: "Acme",
+      location: "Remote",
+      url: `https://x/${SUPABASE_MAX_ROWS - i}`,
+      first_seen_at: timestampWithOffset,
+    }));
+    const { table, orMock } = vacanciesTable([
+      { data: fullPage, error: null },
+      { data: [], error: null },
+    ]);
+    fromMock.mockReturnValue(table);
+
+    await getVacancies();
+
+    const lastRowOfPage1 = fullPage[fullPage.length - 1];
+    expect(orMock).toHaveBeenCalledWith(
+      `first_seen_at.lt."${timestampWithOffset}",and(first_seen_at.eq."${timestampWithOffset}",id.lt.${lastRowOfPage1.id})`
     );
   });
 

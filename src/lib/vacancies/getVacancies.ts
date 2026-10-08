@@ -20,6 +20,13 @@ type VacancyRow = {
   first_seen_at: string;
 };
 
+// PostgREST's or()/and() filter grammar treats , . : ( ) as structural characters;
+// a value containing any of them must be double-quoted, with \ and " escaped.
+function quotePostgrestValue(value: string): string {
+  if (!/[,.:()]/.test(value)) return value;
+  return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+
 export async function getVacancies(): Promise<Vacancy[]> {
   const supabase = getSupabaseServerClient();
 
@@ -32,8 +39,9 @@ export async function getVacancies(): Promise<Vacancy[]> {
       .limit(SUPABASE_MAX_ROWS);
 
     if (after) {
+      const firstSeenAt = quotePostgrestValue(after.first_seen_at);
       query = query.or(
-        `first_seen_at.lt.${after.first_seen_at},and(first_seen_at.eq.${after.first_seen_at},id.lt.${after.id})`
+        `first_seen_at.lt.${firstSeenAt},and(first_seen_at.eq.${firstSeenAt},id.lt.${after.id})`
       );
     }
 
