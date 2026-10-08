@@ -1,10 +1,21 @@
 import { runSync, SyncDatabaseError } from "@/lib/sync/runSync";
+import { constantTimeEqual } from "@/lib/auth/basicAuth";
+
+function isAuthorizedCronRequest(authHeader: string | null, expectedSecret: string | undefined): boolean {
+  if (!expectedSecret) return false;
+  if (!authHeader) return false;
+
+  const schemeMatch = authHeader.match(/^Bearer\s+(.+)$/i);
+  if (!schemeMatch) return false;
+
+  return constantTimeEqual(schemeMatch[1], expectedSecret);
+}
 
 export async function GET(request: Request) {
   const cronSecret = process.env.CRON_SECRET;
   const authHeader = request.headers.get("authorization");
 
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  if (!isAuthorizedCronRequest(authHeader, cronSecret)) {
     return new Response("Unauthorized", { status: 401 });
   }
 
