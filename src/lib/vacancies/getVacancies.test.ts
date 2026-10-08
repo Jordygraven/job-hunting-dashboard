@@ -131,6 +131,56 @@ describe("getVacancies", () => {
     );
   });
 
+  test("escapes a cursor value containing only a double quote", async () => {
+    const valueWithQuote = 'say "hi"';
+    const fullPage = Array.from({ length: SUPABASE_MAX_ROWS }, (_, i) => ({
+      id: SUPABASE_MAX_ROWS - i,
+      title: `Job ${SUPABASE_MAX_ROWS - i}`,
+      company: "Acme",
+      location: "Remote",
+      url: `https://x/${SUPABASE_MAX_ROWS - i}`,
+      first_seen_at: valueWithQuote,
+    }));
+    const { table, orMock } = vacanciesTable([
+      { data: fullPage, error: null },
+      { data: [], error: null },
+    ]);
+    fromMock.mockReturnValue(table);
+
+    await getVacancies();
+
+    const lastRowOfPage1 = fullPage[fullPage.length - 1];
+    const escaped = 'say \\"hi\\"';
+    expect(orMock).toHaveBeenCalledWith(
+      `first_seen_at.lt."${escaped}",and(first_seen_at.eq."${escaped}",id.lt.${lastRowOfPage1.id})`
+    );
+  });
+
+  test("escapes a cursor value containing only a backslash", async () => {
+    const valueWithBackslash = "back\\slash";
+    const fullPage = Array.from({ length: SUPABASE_MAX_ROWS }, (_, i) => ({
+      id: SUPABASE_MAX_ROWS - i,
+      title: `Job ${SUPABASE_MAX_ROWS - i}`,
+      company: "Acme",
+      location: "Remote",
+      url: `https://x/${SUPABASE_MAX_ROWS - i}`,
+      first_seen_at: valueWithBackslash,
+    }));
+    const { table, orMock } = vacanciesTable([
+      { data: fullPage, error: null },
+      { data: [], error: null },
+    ]);
+    fromMock.mockReturnValue(table);
+
+    await getVacancies();
+
+    const lastRowOfPage1 = fullPage[fullPage.length - 1];
+    const escaped = "back\\\\slash";
+    expect(orMock).toHaveBeenCalledWith(
+      `first_seen_at.lt."${escaped}",and(first_seen_at.eq."${escaped}",id.lt.${lastRowOfPage1.id})`
+    );
+  });
+
   test("throws a plain Error with the DB message when a page fails", async () => {
     const { table } = vacanciesTable([{ data: null, error: { message: "connection refused" } }]);
     fromMock.mockReturnValue(table);

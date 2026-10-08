@@ -20,10 +20,9 @@ type VacancyRow = {
   first_seen_at: string;
 };
 
-// PostgREST's or()/and() filter grammar treats , . : ( ) as structural characters;
-// a value containing any of them must be double-quoted, with \ and " escaped.
+// PostgREST's or()/and() filter grammar treats , . : ( ) as structural characters,
+// so every value is double-quoted, with \ and " escaped.
 function quotePostgrestValue(value: string): string {
-  if (!/[,.:()]/.test(value)) return value;
   return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
 }
 
