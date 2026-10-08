@@ -1,5 +1,5 @@
 import type { IgnoreReason } from "./types";
-import type { ShowParam, VacancyStatusFilter, VacancyTabView } from "./vacancyTabs";
+import { statusFilterAppliesToView, type ShowParam, type VacancyStatusFilter, type VacancyTabView } from "./vacancyTabs";
 
 export type VacancyHrefParams = {
   view: VacancyTabView;
@@ -18,7 +18,7 @@ export function buildVacancyHref(params: VacancyHrefParams): string {
   if (params.reasonFilter) {
     searchParams.set("reason", params.reasonFilter);
   }
-  if (params.view === "all" && params.status) {
+  if (statusFilterAppliesToView(params.view) && params.status) {
     searchParams.set("status", params.status);
   }
   if (params.show && params.show !== 10) {

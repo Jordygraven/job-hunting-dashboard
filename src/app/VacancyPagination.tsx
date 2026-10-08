@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { describeShownRows, type ShowParam, type VacancyStatusFilter, type VacancyTabView } from "@/lib/vacancyActions/vacancyTabs";
-import type { IgnoreReason } from "@/lib/vacancyActions/types";
-import { buildVacancyHref } from "@/lib/vacancyActions/vacancyLinks";
+import { describeShownRows, type ShowParam } from "@/lib/vacancyActions/vacancyTabs";
+import { buildVacancyHref, type VacancyHrefParams } from "@/lib/vacancyActions/vacancyLinks";
 
 export function VacancyPagination({
   view,
@@ -13,17 +12,7 @@ export function VacancyPagination({
   company,
   from,
   to,
-}: {
-  view: VacancyTabView;
-  reasonFilter: IgnoreReason | "none" | null;
-  status: VacancyStatusFilter | null;
-  show: ShowParam;
-  filteredCount: number;
-  q: string | null;
-  company: string | null;
-  from: string | null;
-  to: string | null;
-}) {
+}: VacancyHrefParams & { filteredCount: number; show: ShowParam }) {
   const summary = describeShownRows(filteredCount, show);
   if (!summary) {
     return null;

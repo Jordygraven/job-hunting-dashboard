@@ -23,4 +23,16 @@ describe("isAuthorized", () => {
     expect(isAuthorized(basicHeader("user", "secret123"), undefined)).toBe(false);
     expect(isAuthorized(basicHeader("user", ""), "")).toBe(false);
   });
+
+  test("accepts the Basic scheme case-insensitively", () => {
+    const credentials = Buffer.from("user:secret123").toString("base64");
+    expect(isAuthorized(`basic ${credentials}`, "secret123")).toBe(true);
+    expect(isAuthorized(`BASIC ${credentials}`, "secret123")).toBe(true);
+    expect(isAuthorized(`BaSiC ${credentials}`, "secret123")).toBe(true);
+  });
+
+  test("rejects an unrelated scheme", () => {
+    const credentials = Buffer.from("user:secret123").toString("base64");
+    expect(isAuthorized(`Bearer ${credentials}`, "secret123")).toBe(false);
+  });
 });

@@ -19,6 +19,15 @@ describe("proxy matcher", () => {
     expect(matches("/api/syncthing")).toBe(true);
   });
 
+  test("excludes exactly /privacy from the auth gate", () => {
+    expect(matches("/privacy")).toBe(false);
+  });
+
+  test("still gates /privacy subpaths and lookalikes", () => {
+    expect(matches("/privacy/anything")).toBe(true);
+    expect(matches("/privacyx")).toBe(true);
+  });
+
   test("excludes Next.js static assets and the favicon", () => {
     expect(matches("/_next/static/chunk.js")).toBe(false);
     expect(matches("/_next/image")).toBe(false);

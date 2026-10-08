@@ -1,4 +1,4 @@
-function constantTimeEqual(a: string, b: string): boolean {
+export function constantTimeEqual(a: string, b: string): boolean {
   const aBytes = new TextEncoder().encode(a);
   const bBytes = new TextEncoder().encode(b);
   const length = Math.max(aBytes.length, bBytes.length);
@@ -16,11 +16,14 @@ export function isAuthorized(
   expectedPassword: string | undefined
 ): boolean {
   if (!expectedPassword) return false;
-  if (!authHeader?.startsWith("Basic ")) return false;
+  if (!authHeader) return false;
+
+  const schemeMatch = authHeader.match(/^Basic\s+(.+)$/i);
+  if (!schemeMatch) return false;
 
   let decoded: string;
   try {
-    decoded = Buffer.from(authHeader.slice("Basic ".length), "base64").toString("utf-8");
+    decoded = Buffer.from(schemeMatch[1], "base64").toString("utf-8");
   } catch {
     return false;
   }

@@ -53,11 +53,17 @@ export type VacancyStatusFilter = VacancyTabRow["status"];
 
 const STATUS_FILTERS: readonly VacancyStatusFilter[] = ["todo", "applied", "ignored"];
 
+// The status filter only applies on the "all" tab — the other tabs are
+// already filtered to a single status, so a status filter there would be redundant.
+export function statusFilterAppliesToView(view: VacancyTabView): boolean {
+  return view === "all";
+}
+
 export function resolveStatusFilter(
   view: VacancyTabView,
   value: string | string[] | undefined
 ): VacancyStatusFilter | null {
-  if (view !== "all") {
+  if (!statusFilterAppliesToView(view)) {
     return null;
   }
   const candidate = firstOf(value);

@@ -1,8 +1,8 @@
 import Link from "next/link";
-import type { ShowParam, VacancyStatusFilter, VacancyTabCounts, VacancyTabView } from "@/lib/vacancyActions/vacancyTabs";
+import type { VacancyTabCounts, VacancyTabView } from "@/lib/vacancyActions/vacancyTabs";
 import type { IgnoreReason } from "@/lib/vacancyActions/types";
 import { IGNORE_REASONS, REASON_LABELS } from "@/lib/vacancyActions/validation";
-import { buildVacancyHref } from "@/lib/vacancyActions/vacancyLinks";
+import { buildVacancyHref, type VacancyHrefParams } from "@/lib/vacancyActions/vacancyLinks";
 
 const TABS: { view: VacancyTabView; label: string }[] = [
   { view: "todo", label: "To do" },
@@ -27,17 +27,7 @@ export function VacancyTabs({
   company,
   from,
   to,
-}: {
-  view: VacancyTabView;
-  counts: VacancyTabCounts;
-  reasonFilter: IgnoreReason | "none" | null;
-  status: VacancyStatusFilter | null;
-  show: ShowParam;
-  q: string | null;
-  company: string | null;
-  from: string | null;
-  to: string | null;
-}) {
+}: VacancyHrefParams & { counts: VacancyTabCounts }) {
   return (
     <>
       <nav aria-label="Vacancy tabs" className="mb-4 flex gap-4 border-b border-zinc-200 dark:border-zinc-800">
