@@ -5,7 +5,12 @@ import { useEffect, useRef } from "react";
 import type { FormEvent, MouseEvent } from "react";
 import type { IgnoreReason } from "@/lib/vacancyActions/types";
 import { buildVacancyHref } from "@/lib/vacancyActions/vacancyLinks";
-import { STATUS_LABELS, type VacancyStatusFilter, type VacancyTabView } from "@/lib/vacancyActions/vacancyTabs";
+import {
+  statusFilterAppliesToView,
+  STATUS_LABELS,
+  type VacancyStatusFilter,
+  type VacancyTabView,
+} from "@/lib/vacancyActions/vacancyTabs";
 
 const STATUS_OPTIONS: VacancyStatusFilter[] = ["todo", "applied", "ignored"];
 const inputClass = "rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-black";
@@ -138,7 +143,7 @@ export function VacancyFilterBar({
         />
       </label>
 
-      {view === "all" && (
+      {statusFilterAppliesToView(view) && (
         <label className="flex flex-col gap-1">
           Status
           <select name="status" defaultValue={status ?? ""} className={inputClass}>

@@ -31,7 +31,6 @@
 Found during Epic 6's whole-branch review; pre-existing in Epic 5's work, out of scope for Epic 6, deferred here instead of fixed in-place.
 
 - `VacancyFilterBar`'s `formKey` includes `view`, so switching tabs force-remounts the uncontrolled search form and silently discards any text typed into Search but not yet submitted — `src/app/VacancyFilterBar.tsx`.
-- The rule "status filtering only applies on the `all` tab" is hardcoded independently in three places (`vacancyLinks.ts`, `vacancyTabs.ts`'s `resolveStatusFilter`, `VacancyFilterBar.tsx`) instead of defined once.
 - `VacancyTabs`, `VacancyPagination`, and `VacancyFilterBar` each redeclare the identical 7-9 field filter prop bag from scratch instead of sharing one type (e.g. the existing `VacancyHrefParams` in `vacancyLinks.ts`).
 - `getVacancyTabData.ts`: status filtering is applied as a separate `.filter()` step outside the `VacancyFilters`/`matchesVacancyFilters` mechanism, so tab-count badges (computed before the status filter runs) never reflect the status filter while every other filter does. Covered by an existing test documenting this as deliberate — flagged here as a design asymmetry worth a deliberate look, not necessarily a bug.
 - `fetchAllRows.ts` now only stops paginating on a genuinely empty page instead of a short page, costing one extra round trip per call even when all data fits on one page — intentional per its own tests, but a cheaper fix (request `SUPABASE_MAX_ROWS + 1`, treat `<= SUPABASE_MAX_ROWS` as the last page) would avoid the extra round trip.
