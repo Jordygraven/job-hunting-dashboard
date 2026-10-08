@@ -5,8 +5,8 @@ export default defineConfig({
   test: {},
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
-      "server-only": path.resolve(__dirname, "node_modules/server-only/empty.js"),
+      "@": path.resolve(import.meta.dirname, "./src"),
+      "server-only": path.resolve(import.meta.dirname, "node_modules/server-only/empty.js"),
     },
   },
 });
