@@ -1,6 +1,5 @@
 # Backlog
 
-- Create the `/privacy` page. It's linked in the Google OAuth consent screen branding and currently 404s.
 - `braces` (via `eslint-config-next` → `fast-glob` → `micromatch`) has a high-severity stack-exhaustion advisory with no fixed version available upstream (3.0.3 is latest and still flagged). Dev-only; lint only runs on our own files. Recheck when `eslint-config-next` updates its `fast-glob`/`micromatch` chain.
 - Consider ingesting `jobs-noreply@linkedin.com` recommendation emails later. Different layout from the job-alert emails; out of scope for MVP.
 - Store the saved search per vacancy (deferred 5 Oct).
