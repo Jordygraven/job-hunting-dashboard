@@ -3,14 +3,8 @@
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import type { FormEvent, MouseEvent } from "react";
-import type { IgnoreReason } from "@/lib/vacancyActions/types";
-import { buildVacancyHref } from "@/lib/vacancyActions/vacancyLinks";
-import {
-  statusFilterAppliesToView,
-  STATUS_LABELS,
-  type VacancyStatusFilter,
-  type VacancyTabView,
-} from "@/lib/vacancyActions/vacancyTabs";
+import { buildVacancyHref, type VacancyHrefParams } from "@/lib/vacancyActions/vacancyLinks";
+import { statusFilterAppliesToView, STATUS_LABELS, type VacancyStatusFilter } from "@/lib/vacancyActions/vacancyTabs";
 
 const STATUS_OPTIONS: VacancyStatusFilter[] = ["todo", "applied", "ignored"];
 const inputClass = "rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-black";
@@ -60,17 +54,7 @@ export function VacancyFilterBar({
   status,
   companies,
   hasActiveFilters,
-}: {
-  view: VacancyTabView;
-  reasonFilter: IgnoreReason | "none" | null;
-  q: string | null;
-  company: string | null;
-  from: string | null;
-  to: string | null;
-  status: VacancyStatusFilter | null;
-  companies: string[];
-  hasActiveFilters: boolean;
-}) {
+}: VacancyHrefParams & { companies: string[]; hasActiveFilters: boolean }) {
   // Keying the form on the current filter values forces React to remount
   // it (and its uncontrolled inputs) whenever they change via in-page
   // navigation, instead of leaving stale defaultValue-initialized DOM nodes
