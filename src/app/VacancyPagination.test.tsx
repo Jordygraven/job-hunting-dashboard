@@ -8,7 +8,7 @@ afterEach(() => {
   cleanup();
 });
 
-const BASE = { status: null, q: null, company: null, from: null, to: null };
+const BASE = { status: null, q: null, company: null, from: null, to: null, sort: null, dir: null };
 
 describe("VacancyPagination", () => {
   test("renders nothing for 10 or fewer rows", () => {
@@ -72,5 +72,46 @@ describe("VacancyPagination", () => {
       "href",
       "/?view=all&status=todo&show=20"
     );
+  });
+
+  test("the more link carries sort and dir when the column applies on this tab", () => {
+    render(
+      <VacancyPagination
+        view="all"
+        reasonFilter={null}
+        show={10}
+        filteredCount={15}
+        status={null}
+        q={null}
+        company={null}
+        from={null}
+        to={null}
+        sort="status"
+        dir="desc"
+      />
+    );
+    expect(screen.getByRole("link", { name: "Read more" })).toHaveAttribute(
+      "href",
+      "/?view=all&show=20&sort=status&dir=desc"
+    );
+  });
+
+  test("the more link drops sort and dir when the column doesn't apply on this tab", () => {
+    render(
+      <VacancyPagination
+        view="todo"
+        reasonFilter={null}
+        show={10}
+        filteredCount={15}
+        status={null}
+        q={null}
+        company={null}
+        from={null}
+        to={null}
+        sort="status"
+        dir="desc"
+      />
+    );
+    expect(screen.getByRole("link", { name: "Read more" })).toHaveAttribute("href", "/?view=todo&show=20");
   });
 });

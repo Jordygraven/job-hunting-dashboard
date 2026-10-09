@@ -19,16 +19,16 @@ function DetailList({
     if (!emptyMessage) return null;
     return (
       <div className="mt-2">
-        <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">{title}</p>
-        <p className="text-xs text-zinc-600 dark:text-zinc-400">{emptyMessage}</p>
+        <p className="text-xs font-semibold text-text-secondary">{title}</p>
+        <p className="text-xs text-text-muted">{emptyMessage}</p>
       </div>
     );
   }
 
   return (
     <div className="mt-2">
-      <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">{title}</p>
-      <ul className="list-disc pl-4 text-xs text-zinc-600 dark:text-zinc-400">
+      <p className="text-xs font-semibold text-text-secondary">{title}</p>
+      <ul className="list-disc pl-4 text-xs text-text-muted">
         {items.map((item, index) => (
           <li key={index}>
             {item.messageId} · {item.jobId ?? "-"} · {item.reason}
@@ -41,11 +41,8 @@ function DetailList({
 
 function SyncRunRow({ run, open }: { run: SyncRunRecord; open: boolean }) {
   return (
-    <details
-      open={open}
-      className="border-t border-zinc-200 py-2 first:border-t-0 dark:border-zinc-800"
-    >
-      <summary className="cursor-pointer text-sm text-zinc-700 dark:text-zinc-300">
+    <details open={open} className="border-t border-border-subtle py-2 first:border-t-0">
+      <summary className="cursor-pointer text-sm text-text-secondary">
         {formatKlDateTime(run.finishedAt)} ({run.trigger}) · {run.status} ·{" "}
         {run.inserted ?? 0} inserted · {run.skipped ?? 0} skipped ·{" "}
         {pluralize(run.warnings ?? 0, "warning")} ·{" "}
@@ -73,12 +70,10 @@ export function SyncDetails({
   if (recentRuns.length === 0) return null;
 
   return (
-    <details open={defaultOpen} className="mt-3">
-      <summary className="cursor-pointer text-sm font-semibold text-black dark:text-zinc-50">
-        Details
-      </summary>
+    <details open={defaultOpen} className="mt-3 rounded-lg border border-border-subtle bg-surface-panel p-4">
+      <summary className="cursor-pointer text-sm font-semibold text-text-primary">Details</summary>
       <div className="mt-2">
-        <h3 className="text-sm font-semibold text-black dark:text-zinc-50">Recent syncs</h3>
+        <h3 className="text-sm font-semibold text-text-primary">Recent syncs</h3>
         <div className="mt-1">
           {recentRuns.map((run, index) => (
             <SyncRunRow key={run.id} run={run} open={defaultOpen && index === 0} />

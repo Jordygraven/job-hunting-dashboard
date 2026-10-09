@@ -27,28 +27,30 @@ export function VacancyTabs({
   company,
   from,
   to,
+  sort,
+  dir,
 }: VacancyHrefParams & { counts: VacancyTabCounts }) {
   return (
     <>
-      <nav aria-label="Vacancy tabs" className="mb-4 flex gap-4 border-b border-zinc-200 dark:border-zinc-800">
+      <nav aria-label="Vacancy tabs" className="mb-6 flex gap-6 border-b border-border-subtle">
         {TABS.map((tab) => (
           <Link
             key={tab.view}
-            href={buildVacancyHref({ view: tab.view, status, show, q, company, from, to })}
+            href={buildVacancyHref({ view: tab.view, status, show, q, company, from, to, sort, dir })}
             aria-current={view === tab.view ? "page" : undefined}
-            className={`pb-2 text-sm ${
+            className={`-mb-px border-b-2 pb-3 text-sm transition-colors ${
               view === tab.view
-                ? "border-b-2 border-black font-semibold text-black dark:border-white dark:text-white"
-                : "text-zinc-600 dark:text-zinc-400"
+                ? "border-accent font-semibold text-text-primary"
+                : "border-transparent text-text-secondary hover:text-text-primary"
             }`}
           >
-            {tab.label} ({counts[tab.view]})
+            {tab.label} <span className="text-text-muted">({counts[tab.view]})</span>
           </Link>
         ))}
       </nav>
 
       {view === "ignored" && (
-        <nav aria-label="Ignore reason filter" className="mb-4 flex gap-3 text-sm">
+        <nav aria-label="Ignore reason filter" className="mb-4 flex gap-4 text-sm">
           {REASON_FILTERS.map((filter) => (
             <Link
               key={filter.label}
@@ -60,12 +62,14 @@ export function VacancyTabs({
                 company,
                 from,
                 to,
+                sort,
+                dir,
               })}
               aria-current={reasonFilter === filter.value ? "page" : undefined}
               className={
                 reasonFilter === filter.value
-                  ? "font-semibold text-black dark:text-white"
-                  : "text-zinc-600 dark:text-zinc-400"
+                  ? "font-semibold text-accent"
+                  : "text-text-secondary hover:text-text-primary"
               }
             >
               {filter.label}

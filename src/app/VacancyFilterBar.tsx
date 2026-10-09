@@ -7,7 +7,12 @@ import { buildVacancyHref, type VacancyHrefParams } from "@/lib/vacancyActions/v
 import { statusFilterAppliesToView, STATUS_LABELS, type VacancyStatusFilter } from "@/lib/vacancyActions/vacancyTabs";
 
 const STATUS_OPTIONS: VacancyStatusFilter[] = ["todo", "applied", "ignored"];
-const inputClass = "rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-black";
+const inputClass =
+  "rounded-sm border border-border-subtle bg-surface-row px-2 py-1 text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
+const buttonClass =
+  "rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
+const ghostLinkClass =
+  "rounded-full border border-border-subtle px-4 py-1.5 text-sm text-text-secondary transition-colors hover:border-accent hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
 
 function disableEmptyFields(form: HTMLFormElement) {
   for (const element of Array.from(form.elements)) {
@@ -54,6 +59,8 @@ export function VacancyFilterBar({
   status,
   companies,
   hasActiveFilters,
+  sort,
+  dir,
 }: VacancyHrefParams & { companies: string[]; hasActiveFilters: boolean }) {
   // Keying the form on the current filter values forces React to remount
   // it (and its uncontrolled inputs) whenever they change via in-page
@@ -83,17 +90,23 @@ export function VacancyFilterBar({
       method="get"
       action="/"
       onSubmit={handleSubmit}
-      className="mb-4 flex flex-wrap items-end gap-3 text-sm"
+      className="mb-6 flex flex-wrap items-end gap-3 rounded-lg border border-border-subtle bg-surface-panel p-4 text-sm"
     >
       <input type="hidden" name="view" value={view} />
       {reasonFilter && <input type="hidden" name="reason" value={reasonFilter} />}
+      {sort && dir && (
+        <>
+          <input type="hidden" name="sort" value={sort} />
+          <input type="hidden" name="dir" value={dir} />
+        </>
+      )}
 
-      <label className="flex flex-col gap-1">
+      <label className="flex flex-col gap-1 text-text-secondary">
         Search
         <input type="text" name="q" defaultValue={q ?? ""} maxLength={100} className={inputClass} />
       </label>
 
-      <label className="flex flex-col gap-1">
+      <label className="flex flex-col gap-1 text-text-secondary">
         Company
         <select name="company" defaultValue={company ?? ""} className={inputClass}>
           <option value="">All companies</option>
@@ -105,7 +118,7 @@ export function VacancyFilterBar({
         </select>
       </label>
 
-      <label className="flex flex-col gap-1">
+      <label className="flex flex-col gap-1 text-text-secondary">
         From
         <input
           type="date"
@@ -116,7 +129,7 @@ export function VacancyFilterBar({
         />
       </label>
 
-      <label className="flex flex-col gap-1">
+      <label className="flex flex-col gap-1 text-text-secondary">
         To
         <input
           type="date"
@@ -128,7 +141,7 @@ export function VacancyFilterBar({
       </label>
 
       {statusFilterAppliesToView(view) && (
-        <label className="flex flex-col gap-1">
+        <label className="flex flex-col gap-1 text-text-secondary">
           Status
           <select name="status" defaultValue={status ?? ""} className={inputClass}>
             <option value="">All statuses</option>
@@ -141,12 +154,12 @@ export function VacancyFilterBar({
         </label>
       )}
 
-      <button type="submit" className="rounded border border-zinc-300 px-3 py-1 dark:border-zinc-700">
+      <button type="submit" className={buttonClass}>
         Search
       </button>
 
       {hasActiveFilters && (
-        <Link href={buildVacancyHref({ view, reasonFilter })} className="underline">
+        <Link href={buildVacancyHref({ view, reasonFilter, sort, dir })} className={ghostLinkClass}>
           Clear filters
         </Link>
       )}

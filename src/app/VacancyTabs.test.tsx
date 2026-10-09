@@ -8,7 +8,7 @@ afterEach(() => {
   cleanup();
 });
 
-const BASE = { status: null, q: null, company: null, from: null, to: null };
+const BASE = { status: null, q: null, company: null, from: null, to: null, sort: null, dir: null };
 
 describe("VacancyTabs", () => {
   test("marks the active tab with aria-current and shows each tab's count", () => {
@@ -135,11 +135,54 @@ describe("VacancyTabs", () => {
         company={null}
         from={null}
         to={null}
+        sort={null}
+        dir={null}
       />
     );
     expect(screen.getByRole("link", { name: /^All/ })).toHaveAttribute(
       "href",
       "/?view=all&status=applied"
+    );
+    expect(screen.getByRole("link", { name: /to do/i })).toHaveAttribute("href", "/?view=todo");
+  });
+
+  test("tab and reason links carry sort and dir when the column applies on the target tab", () => {
+    render(
+      <VacancyTabs
+        view="all"
+        counts={{ todo: 0, applied: 0, ignored: 0, all: 0 }}
+        reasonFilter={null}
+        show={10}
+        status={null}
+        q={null}
+        company={null}
+        from={null}
+        to={null}
+        sort="title"
+        dir="asc"
+      />
+    );
+    expect(screen.getByRole("link", { name: /applied/i })).toHaveAttribute(
+      "href",
+      "/?view=applied&sort=title&dir=asc"
+    );
+  });
+
+  test("tab links drop sort and dir when the column doesn't apply on the target tab", () => {
+    render(
+      <VacancyTabs
+        view="all"
+        counts={{ todo: 0, applied: 0, ignored: 0, all: 0 }}
+        reasonFilter={null}
+        show={10}
+        status={null}
+        q={null}
+        company={null}
+        from={null}
+        to={null}
+        sort="status"
+        dir="asc"
+      />
     );
     expect(screen.getByRole("link", { name: /to do/i })).toHaveAttribute("href", "/?view=todo");
   });

@@ -11,8 +11,16 @@ import type { IgnoreReason } from "@/lib/vacancyActions/types";
 type VacancyRowStatus = "todo" | "applied" | "ignored";
 type ActionResult = { ok: true } | { ok: false; error: string };
 
-const CONTROL_CLASS =
-  "whitespace-nowrap rounded-full border border-black px-3 py-1 text-sm transition-colors hover:bg-black hover:text-white disabled:pointer-events-none disabled:opacity-40 dark:border-white dark:hover:bg-white dark:hover:text-black";
+const GHOST_CLASS =
+  "whitespace-nowrap rounded-full border border-border-control bg-surface-control px-3 py-1 text-sm text-text-primary transition-colors hover:border-border-control-hover hover:bg-surface-control-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-40";
+const FILLED_CLASS =
+  "whitespace-nowrap rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-40";
+const SELECT_CLASS =
+  "appearance-none whitespace-nowrap rounded-full border border-border-control bg-surface-control bg-[length:10px] bg-[right_0.65rem_center] bg-no-repeat py-1 pr-7 pl-3 text-sm text-text-primary transition-colors hover:border-border-control-hover hover:bg-surface-control-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-40";
+const SELECT_CHEVRON = {
+  backgroundImage:
+    "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23f4f4f6' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\")",
+};
 
 export function VacancyActions({
   vacancyId,
@@ -84,13 +92,13 @@ export function VacancyActions({
 
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-nowrap items-center gap-2 whitespace-nowrap">
         {isEditingDate ? (
           <>
             <input
               type="date"
               aria-label="Applied on"
-              className={CONTROL_CLASS}
+              className={GHOST_CLASS}
               value={dateValue}
               max={getKlDateString()}
               disabled={isPending}
@@ -98,7 +106,7 @@ export function VacancyActions({
             />
             <button
               type="button"
-              className={CONTROL_CLASS}
+              className={GHOST_CLASS}
               disabled={isPending || dateValue === appliedOn}
               onClick={handleSaveDate}
             >
@@ -106,7 +114,7 @@ export function VacancyActions({
             </button>
             <button
               type="button"
-              className={CONTROL_CLASS}
+              className={GHOST_CLASS}
               disabled={isPending}
               onClick={cancelDateEdit}
             >
@@ -118,7 +126,7 @@ export function VacancyActions({
             {status === "todo" && (
               <button
                 type="button"
-                className={CONTROL_CLASS}
+                className={FILLED_CLASS}
                 disabled={isPending}
                 onClick={() => run(() => apply(vacancyId))}
               >
@@ -130,7 +138,7 @@ export function VacancyActions({
               <>
                 <button
                   type="button"
-                  className={CONTROL_CLASS}
+                  className={GHOST_CLASS}
                   disabled={isPending}
                   onClick={() => run(() => ignore(vacancyId))}
                 >
@@ -138,7 +146,8 @@ export function VacancyActions({
                 </button>
                 <select
                   aria-label="Ignore with reason"
-                  className={CONTROL_CLASS}
+                  className={SELECT_CLASS}
+                  style={SELECT_CHEVRON}
                   disabled={isPending}
                   value={reasonValue}
                   onChange={handleReasonChange}
@@ -156,7 +165,7 @@ export function VacancyActions({
             {(status === "applied" || status === "ignored") && (
               <button
                 type="button"
-                className={CONTROL_CLASS}
+                className={GHOST_CLASS}
                 disabled={isPending}
                 onClick={() => run(() => undo(vacancyId))}
               >
@@ -167,7 +176,7 @@ export function VacancyActions({
             {status === "applied" && (
               <button
                 type="button"
-                className={CONTROL_CLASS}
+                className={GHOST_CLASS}
                 disabled={isPending}
                 onClick={openDateEditor}
               >
@@ -179,7 +188,7 @@ export function VacancyActions({
       </div>
 
       {error && (
-        <p role="alert" className="text-xs text-red-600 dark:text-red-400">
+        <p role="alert" className="text-xs text-danger-fg">
           {error}
         </p>
       )}

@@ -42,29 +42,43 @@ export default async function Home({
 }) {
   const params = await searchParams;
   const [
-    { view, reasonFilter, statusFilter, counts, rows, show, filteredCount, q, company, from, to, companies, hasActiveFilters },
+    {
+      view,
+      reasonFilter,
+      statusFilter,
+      counts,
+      rows,
+      show,
+      filteredCount,
+      q,
+      company,
+      from,
+      to,
+      companies,
+      hasActiveFilters,
+      sort,
+      dir,
+    },
     recentRuns,
   ] = await Promise.all([getVacancyTabData(params), getRecentSyncRuns()]);
   const latestRun = recentRuns[0] ?? null;
   const alerts = getSyncAlert(latestRun, new Date());
-  const clearFiltersHref = buildVacancyHref({ view, reasonFilter });
+  const clearFiltersHref = buildVacancyHref({ view, reasonFilter, sort, dir });
 
   return (
-    <div className="flex flex-col flex-1 bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-5xl mx-auto flex-col py-12 px-6 gap-8">
-        <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">Vacancies</h1>
+    <div className="flex flex-col flex-1 bg-surface-page font-sans">
+      <main className="flex flex-1 w-full max-w-content mx-auto flex-col py-12 px-6 gap-8">
+        <h1 className="text-2xl font-semibold text-text-primary">Vacancies</h1>
 
         <section>
-          <h2 className="text-lg font-semibold mb-2 text-black dark:text-zinc-50">
-            Sync status
-          </h2>
+          <h2 className="text-lg font-semibold mb-3 text-text-primary">Sync status</h2>
 
           <div className="mb-3">
             <SyncButton />
           </div>
 
           {alerts.length > 0 && (
-            <div className="mb-3 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+            <div className="mb-3 rounded-lg border border-danger-border bg-danger-bg p-3 text-sm text-danger-fg">
               <ul className="list-disc pl-4">
                 {alerts.map((reason) => (
                   <li key={reason.type}>{alertText(reason)}</li>
@@ -74,14 +88,14 @@ export default async function Home({
           )}
 
           {latestRun && latestRun.status === "error" && (
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="text-sm text-text-secondary">
               Finished {formatKlDateTime(latestRun.finishedAt)} ({latestRun.trigger}) · sync
               failed, see above.
             </p>
           )}
 
           {latestRun && latestRun.status === "ok" && (
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="text-sm text-text-secondary">
               Finished {formatKlDateTime(latestRun.finishedAt)} ({latestRun.trigger}) ·{" "}
               {latestRun.messages ?? 0} messages, {latestRun.cards ?? 0} cards,{" "}
               {latestRun.inserted ?? 0} inserted, {latestRun.skipped ?? 0} skipped,{" "}
@@ -103,6 +117,8 @@ export default async function Home({
             status={statusFilter}
             companies={companies}
             hasActiveFilters={hasActiveFilters}
+            sort={sort}
+            dir={dir}
           />
           <VacancyTabs
             view={view}
@@ -114,12 +130,23 @@ export default async function Home({
             company={company}
             from={from}
             to={to}
+            sort={sort}
+            dir={dir}
           />
           <VacancyTable
             view={view}
             rows={rows}
             hasActiveFilters={hasActiveFilters}
             clearFiltersHref={clearFiltersHref}
+            reasonFilter={reasonFilter}
+            status={statusFilter}
+            show={show}
+            q={q}
+            company={company}
+            from={from}
+            to={to}
+            sort={sort}
+            dir={dir}
           />
           <VacancyPagination
             view={view}
@@ -131,6 +158,8 @@ export default async function Home({
             company={company}
             from={from}
             to={to}
+            sort={sort}
+            dir={dir}
           />
         </section>
       </main>

@@ -48,7 +48,29 @@ describe("buildVacancyHref", () => {
         company: "Acme",
         from: "2026-10-01",
         to: "2026-10-31",
+        sort: "status",
+        dir: "desc",
       })
-    ).toBe("/?view=all&status=ignored&show=20&q=engineer&company=Acme&from=2026-10-01&to=2026-10-31");
+    ).toBe(
+      "/?view=all&status=ignored&show=20&q=engineer&company=Acme&from=2026-10-01&to=2026-10-31&sort=status&dir=desc"
+    );
+  });
+
+  test("includes sort and dir when the column is sortable on the view", () => {
+    expect(buildVacancyHref({ view: "todo", sort: "title", dir: "asc" })).toBe(
+      "/?view=todo&sort=title&dir=asc"
+    );
+  });
+
+  test("drops sort and dir when the column isn't sortable on the target view", () => {
+    expect(buildVacancyHref({ view: "todo", sort: "status", dir: "asc" })).toBe("/?view=todo");
+    expect(buildVacancyHref({ view: "todo", sort: "appliedOn", dir: "asc" })).toBe("/?view=todo");
+  });
+
+  test("omits sort and dir when null or absent, or when only one of the pair is set", () => {
+    expect(buildVacancyHref({ view: "todo", sort: null, dir: null })).toBe("/?view=todo");
+    expect(buildVacancyHref({ view: "todo" })).toBe("/?view=todo");
+    expect(buildVacancyHref({ view: "todo", sort: "title" })).toBe("/?view=todo");
+    expect(buildVacancyHref({ view: "todo", dir: "asc" })).toBe("/?view=todo");
   });
 });

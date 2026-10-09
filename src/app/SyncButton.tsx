@@ -27,13 +27,13 @@ export function SyncButton() {
       <button
         type="submit"
         disabled={isPending}
-        className="self-start rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
+        className="self-start rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-40"
       >
         {isPending ? "Syncing…" : "Sync now"}
       </button>
 
       {state.status === "ok" && (
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-sm text-text-secondary">
           Synced: {state.result.messages} messages, {state.result.cards} cards,{" "}
           {state.result.inserted} inserted, {state.result.skipped} skipped,{" "}
           {pluralize(state.result.warnings, "warning")}.
@@ -41,7 +41,7 @@ export function SyncButton() {
       )}
 
       {state.status === "error" && (
-        <p className="text-sm text-red-700 dark:text-red-400">Sync failed: {state.message}</p>
+        <p className="text-sm text-danger-fg">Sync failed: {state.message}</p>
       )}
     </form>
   );

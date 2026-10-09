@@ -271,6 +271,66 @@ describe("VacancyFilterBar", () => {
     expect(screen.getByLabelText("Company")).toBeDisabled();
   });
 
+  test("carries sort and dir as hidden fields when set, omits them when absent", () => {
+    const { rerender } = render(
+      <VacancyFilterBar
+        view="all"
+        reasonFilter={null}
+        q={null}
+        company={null}
+        from={null}
+        to={null}
+        status={null}
+        companies={[]}
+        hasActiveFilters={false}
+        sort="status"
+        dir="desc"
+      />
+    );
+    let form = document.querySelector("form") as HTMLFormElement;
+    expect(form.querySelector('input[name="sort"]')).toHaveValue("status");
+    expect(form.querySelector('input[name="dir"]')).toHaveValue("desc");
+
+    rerender(
+      <VacancyFilterBar
+        view="all"
+        reasonFilter={null}
+        q={null}
+        company={null}
+        from={null}
+        to={null}
+        status={null}
+        companies={[]}
+        hasActiveFilters={false}
+      />
+    );
+    form = document.querySelector("form") as HTMLFormElement;
+    expect(form.querySelector('input[name="sort"]')).not.toBeInTheDocument();
+    expect(form.querySelector('input[name="dir"]')).not.toBeInTheDocument();
+  });
+
+  test("Clear filters href keeps the current sort and dir", () => {
+    render(
+      <VacancyFilterBar
+        view="todo"
+        reasonFilter={null}
+        q="engineer"
+        company={null}
+        from={null}
+        to={null}
+        status={null}
+        companies={[]}
+        hasActiveFilters={true}
+        sort="title"
+        dir="asc"
+      />
+    );
+    expect(screen.getByRole("link", { name: "Clear filters" })).toHaveAttribute(
+      "href",
+      "/?view=todo&sort=title&dir=asc"
+    );
+  });
+
   test("clicking anywhere in From or To opens the native date picker", () => {
     render(
       <VacancyFilterBar
