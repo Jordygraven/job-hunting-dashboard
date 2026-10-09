@@ -1,5 +1,11 @@
 import { describe, expect, test } from "vitest";
-import { IGNORE_REASONS, isValidAppliedOnDate, isValidIgnoreReason, isValidVacancyId } from "./validation";
+import {
+  IGNORE_REASONS,
+  isValidAppliedOnDate,
+  isValidIgnoreReason,
+  isValidOutcomeOnDate,
+  isValidVacancyId,
+} from "./validation";
 
 describe("isValidVacancyId", () => {
   test("accepts a positive integer", () => {
@@ -50,6 +56,34 @@ describe("isValidAppliedOnDate", () => {
   test("rejects a date in the future in KL", () => {
     const now = new Date("2026-10-05T20:00:00.000Z"); // already 2026-10-06 in KL
     expect(isValidAppliedOnDate("2026-10-07", now)).toBe(false);
+  });
+});
+
+describe("isValidOutcomeOnDate", () => {
+  test("accepts today (KL), equal to the applied date", () => {
+    const now = new Date("2026-10-06T10:00:00.000Z");
+    expect(isValidOutcomeOnDate("2026-10-06", "2026-10-06", now)).toBe(true);
+  });
+
+  test("rejects a date in the future in KL", () => {
+    const now = new Date("2026-10-05T20:00:00.000Z"); // already 2026-10-06 in KL
+    expect(isValidOutcomeOnDate("2026-10-07", "2026-10-01", now)).toBe(false);
+  });
+
+  test("accepts a date equal to the applied date", () => {
+    const now = new Date("2026-10-06T10:00:00.000Z");
+    expect(isValidOutcomeOnDate("2026-10-01", "2026-10-01", now)).toBe(true);
+  });
+
+  test("rejects a date one day before the applied date", () => {
+    const now = new Date("2026-10-06T10:00:00.000Z");
+    expect(isValidOutcomeOnDate("2026-09-30", "2026-10-01", now)).toBe(false);
+  });
+
+  test("rejects malformed date strings", () => {
+    const now = new Date("2026-10-06T10:00:00.000Z");
+    expect(isValidOutcomeOnDate("not-a-date", "2026-10-01", now)).toBe(false);
+    expect(isValidOutcomeOnDate(null, "2026-10-01", now)).toBe(false);
   });
 });
 

@@ -2,7 +2,7 @@ import { IGNORE_REASONS } from "./validation";
 import type { Vacancy } from "@/lib/vacancies/getVacancies";
 import type { IgnoreReason, VacancyStatus } from "./types";
 
-export type VacancyTabView = "todo" | "applied" | "ignored" | "all";
+export type VacancyTabView = "todo" | "interest" | "applied" | "all" | "success" | "rejected" | "ignored";
 
 export type VacancyTabRow = {
   id: number;
@@ -11,20 +11,25 @@ export type VacancyTabRow = {
   location: string | null;
   url: string;
   firstSeenAt: string;
-  status: "todo" | "applied" | "ignored";
+  status: "todo" | "applied" | "ignored" | "success" | "rejected";
   appliedOn: string | null;
+  outcomeOn: string | null;
   ignoredOn: string | null;
   ignoreReason: IgnoreReason | null;
+  starred: boolean;
 };
 
 export type VacancyTabCounts = {
   todo: number;
   applied: number;
+  success: number;
+  rejected: number;
   ignored: number;
   all: number;
+  interest: number;
 };
 
-const VIEWS: readonly VacancyTabView[] = ["todo", "applied", "ignored", "all"];
+const VIEWS: readonly VacancyTabView[] = ["todo", "interest", "applied", "all", "success", "rejected", "ignored"];
 const REASON_FILTERS: readonly string[] = [...IGNORE_REASONS, "none"];
 
 export function firstOf(value: string | string[] | undefined): string | undefined {
@@ -51,12 +56,13 @@ export function resolveReasonFilter(
 
 export type VacancyStatusFilter = VacancyTabRow["status"];
 
-const STATUS_FILTERS: readonly VacancyStatusFilter[] = ["todo", "applied", "ignored"];
+const STATUS_FILTERS: readonly VacancyStatusFilter[] = ["todo", "applied", "success", "rejected", "ignored"];
 
-// The status filter only applies on the "all" tab — the other tabs are
-// already filtered to a single status, so a status filter there would be redundant.
+// The status filter only applies on the "all" and "interest" tabs — the other
+// tabs are already filtered to a single status, so a status filter there
+// would be redundant.
 export function statusFilterAppliesToView(view: VacancyTabView): boolean {
-  return view === "all";
+  return view === "all" || view === "interest";
 }
 
 export function resolveStatusFilter(
@@ -75,10 +81,18 @@ export function resolveStatusFilter(
 export const STATUS_LABELS: Record<VacancyTabRow["status"], string> = {
   todo: "To do",
   applied: "Applied",
+  success: "Success",
+  rejected: "Rejected",
   ignored: "Ignored",
 };
 
-export function buildVacancyTabRow(vacancy: Vacancy, status: VacancyStatus): VacancyTabRow {
+export function buildVacancyTabRow(vacancy: Vacancy, status: VacancyStatus, starred: boolean): VacancyTabRow {
+  const appliedOn =
+    status.status === "applied" || status.status === "success" || status.status === "rejected"
+      ? status.appliedOn
+      : null;
+  const outcomeOn = status.status === "success" || status.status === "rejected" ? status.outcomeOn : null;
+
   return {
     id: vacancy.id,
     title: vacancy.title,
@@ -87,9 +101,11 @@ export function buildVacancyTabRow(vacancy: Vacancy, status: VacancyStatus): Vac
     url: vacancy.url,
     firstSeenAt: vacancy.firstSeenAt,
     status: status.status,
-    appliedOn: status.status === "applied" ? status.appliedOn : null,
+    appliedOn,
+    outcomeOn,
     ignoredOn: status.status === "ignored" ? status.date : null,
     ignoreReason: status.status === "ignored" ? status.reason : null,
+    starred,
   };
 }
 
@@ -98,7 +114,12 @@ export function selectRowsForView(
   view: VacancyTabView,
   reasonFilter: IgnoreReason | "none" | null
 ): VacancyTabRow[] {
-  const byView = view === "all" ? rows : rows.filter((row) => row.status === view);
+  const byView =
+    view === "all"
+      ? rows
+      : view === "interest"
+        ? rows.filter((row) => row.starred)
+        : rows.filter((row) => row.status === view);
   if (view !== "ignored" || reasonFilter === null) {
     return byView;
   }
@@ -108,11 +129,21 @@ export function selectRowsForView(
 }
 
 export function countByView(rows: VacancyTabRow[]): VacancyTabCounts {
+  const todo = rows.filter((row) => row.status === "todo").length;
+  const applied = rows.filter((row) => row.status === "applied").length;
+  const success = rows.filter((row) => row.status === "success").length;
+  const rejected = rows.filter((row) => row.status === "rejected").length;
+  const ignored = rows.filter((row) => row.status === "ignored").length;
+  const interest = rows.filter((row) => row.starred).length;
+
   return {
-    todo: rows.filter((row) => row.status === "todo").length,
-    applied: rows.filter((row) => row.status === "applied").length,
-    ignored: rows.filter((row) => row.status === "ignored").length,
-    all: rows.length,
+    todo,
+    applied,
+    success,
+    rejected,
+    ignored,
+    all: todo + applied + success + rejected + ignored,
+    interest,
   };
 }
 

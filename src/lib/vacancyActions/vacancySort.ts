@@ -7,6 +7,7 @@ export type SortableColumnKey =
   | "location"
   | "firstSeenAt"
   | "appliedOn"
+  | "outcomeOn"
   | "ignoredOn"
   | "ignoreReason"
   | "status";
@@ -43,6 +44,11 @@ const COLUMN_DEFS: Record<SortableColumnKey, ColumnDef> = {
     getValue: (row) => row.appliedOn,
     compareValues: plainCompareValues,
   },
+  outcomeOn: {
+    label: "Outcome on",
+    getValue: (row) => row.outcomeOn,
+    compareValues: plainCompareValues,
+  },
   ignoredOn: {
     label: "Ignored on",
     getValue: (row) => row.ignoredOn,
@@ -60,7 +66,10 @@ const COLUMN_DEFS: Record<SortableColumnKey, ColumnDef> = {
 
 export const COLUMNS_BY_VIEW: Record<VacancyTabView, readonly SortableColumnKey[]> = {
   todo: ["title", "company", "location", "firstSeenAt"],
+  interest: ["title", "company", "location", "firstSeenAt", "status"],
   applied: ["title", "company", "location", "firstSeenAt", "appliedOn"],
+  success: ["title", "company", "location", "firstSeenAt", "appliedOn", "outcomeOn"],
+  rejected: ["title", "company", "location", "firstSeenAt", "appliedOn", "outcomeOn"],
   ignored: ["title", "company", "location", "firstSeenAt", "ignoredOn", "ignoreReason"],
   all: ["title", "company", "location", "firstSeenAt", "status"],
 };
@@ -112,7 +121,9 @@ export function sortRows(
   dir: SortDir | null
 ): VacancyTabRow[] {
   if (sort === null || dir === null) {
-    return rows;
+    // No explicit sort: starred rows float to the top, stable otherwise so
+    // relative order within each group (starred / not starred) is preserved.
+    return [...rows].sort((a, b) => Number(b.starred) - Number(a.starred));
   }
 
   const { getValue, compareValues = localeCompareValues } = COLUMN_DEFS[sort];

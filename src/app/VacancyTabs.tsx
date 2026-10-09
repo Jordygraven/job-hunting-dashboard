@@ -6,9 +6,12 @@ import { buildVacancyHref, type VacancyHrefParams } from "@/lib/vacancyActions/v
 
 const TABS: { view: VacancyTabView; label: string }[] = [
   { view: "todo", label: "To do" },
+  { view: "interest", label: "Interest" },
   { view: "applied", label: "Applied" },
-  { view: "ignored", label: "Ignored" },
   { view: "all", label: "All" },
+  { view: "success", label: "Success" },
+  { view: "rejected", label: "Rejected" },
+  { view: "ignored", label: "Ignored" },
 ];
 
 const REASON_FILTERS: { value: IgnoreReason | "none" | null; label: string }[] = [

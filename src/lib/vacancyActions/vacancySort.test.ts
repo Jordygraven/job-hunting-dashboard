@@ -18,8 +18,10 @@ function row(overrides: Partial<VacancyTabRow> = {}): VacancyTabRow {
     firstSeenAt: "2026-10-01T00:00:00.000Z",
     status: "todo",
     appliedOn: null,
+    outcomeOn: null,
     ignoredOn: null,
     ignoreReason: null,
+    starred: false,
     ...overrides,
   };
 }
@@ -27,12 +29,29 @@ function row(overrides: Partial<VacancyTabRow> = {}): VacancyTabRow {
 describe("COLUMNS_BY_VIEW", () => {
   test("lists the sortable columns per tab per spec", () => {
     expect(COLUMNS_BY_VIEW.todo).toEqual(["title", "company", "location", "firstSeenAt"]);
+    expect(COLUMNS_BY_VIEW.interest).toEqual(["title", "company", "location", "firstSeenAt", "status"]);
     expect(COLUMNS_BY_VIEW.applied).toEqual([
       "title",
       "company",
       "location",
       "firstSeenAt",
       "appliedOn",
+    ]);
+    expect(COLUMNS_BY_VIEW.success).toEqual([
+      "title",
+      "company",
+      "location",
+      "firstSeenAt",
+      "appliedOn",
+      "outcomeOn",
+    ]);
+    expect(COLUMNS_BY_VIEW.rejected).toEqual([
+      "title",
+      "company",
+      "location",
+      "firstSeenAt",
+      "appliedOn",
+      "outcomeOn",
     ]);
     expect(COLUMNS_BY_VIEW.ignored).toEqual([
       "title",
@@ -43,6 +62,13 @@ describe("COLUMNS_BY_VIEW", () => {
       "ignoreReason",
     ]);
     expect(COLUMNS_BY_VIEW.all).toEqual(["title", "company", "location", "firstSeenAt", "status"]);
+  });
+
+  test("outcomeOn is not sortable on all (or anywhere outside Success/Rejected)", () => {
+    expect(COLUMNS_BY_VIEW.all).not.toContain("outcomeOn");
+    expect(COLUMNS_BY_VIEW.todo).not.toContain("outcomeOn");
+    expect(COLUMNS_BY_VIEW.applied).not.toContain("outcomeOn");
+    expect(COLUMNS_BY_VIEW.interest).not.toContain("outcomeOn");
   });
 });
 
@@ -75,6 +101,7 @@ describe("resolveSort", () => {
   test("ignores a column that isn't sortable on the given view", () => {
     expect(resolveSort("todo", "status", "asc")).toEqual({ sort: null, dir: null });
     expect(resolveSort("todo", "appliedOn", "asc")).toEqual({ sort: null, dir: null });
+    expect(resolveSort("all", "outcomeOn", "asc")).toEqual({ sort: null, dir: null });
   });
 
   test("resolves to null when params are missing", () => {
@@ -90,10 +117,28 @@ describe("resolveSort", () => {
 });
 
 describe("sortRows", () => {
-  test("returns rows unchanged when sort or dir is null (today's default order)", () => {
+  test("with no sort/dir, starred rows float to the top; relative order preserved within each group", () => {
+    const rows = [
+      row({ id: 1, title: "A", starred: false }),
+      row({ id: 2, title: "B", starred: true }),
+      row({ id: 3, title: "C", starred: false }),
+      row({ id: 4, title: "D", starred: true }),
+    ];
+    expect(sortRows(rows, null, null).map((r) => r.id)).toEqual([2, 4, 1, 3]);
+    expect(sortRows(rows, "title", null).map((r) => r.id)).toEqual([2, 4, 1, 3]);
+  });
+
+  test("with no starred rows at all, default order is unchanged", () => {
     const rows = [row({ id: 3, title: "C" }), row({ id: 1, title: "A" }), row({ id: 2, title: "B" })];
-    expect(sortRows(rows, null, null)).toBe(rows);
-    expect(sortRows(rows, "title", null)).toBe(rows);
+    expect(sortRows(rows, null, null).map((r) => r.id)).toEqual([3, 1, 2]);
+  });
+
+  test("an explicit column sort ignores starred entirely — header click always wins", () => {
+    const rows = [
+      row({ id: 1, title: "banana", starred: false }),
+      row({ id: 2, title: "apple", starred: true }),
+    ];
+    expect(sortRows(rows, "title", "asc").map((r) => r.id)).toEqual([2, 1]);
   });
 
   test("title: sorts asc and desc, case-insensitively, tie broken by id", () => {
@@ -140,6 +185,16 @@ describe("sortRows", () => {
     ];
     expect(sortRows(rows, "appliedOn", "asc").map((r) => r.id)).toEqual([3, 1, 2]);
     expect(sortRows(rows, "appliedOn", "desc").map((r) => r.id)).toEqual([1, 3, 2]);
+  });
+
+  test("outcomeOn: asc is oldest first, empty sorts last in both directions", () => {
+    const rows = [
+      row({ id: 1, outcomeOn: "2026-10-05" }),
+      row({ id: 2, outcomeOn: null }),
+      row({ id: 3, outcomeOn: "2026-10-01" }),
+    ];
+    expect(sortRows(rows, "outcomeOn", "asc").map((r) => r.id)).toEqual([3, 1, 2]);
+    expect(sortRows(rows, "outcomeOn", "desc").map((r) => r.id)).toEqual([1, 3, 2]);
   });
 
   test("ignoredOn: asc is oldest first", () => {

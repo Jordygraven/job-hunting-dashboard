@@ -17,8 +17,11 @@ describe("buildVacancyHref", () => {
     expect(buildVacancyHref({ view: "ignored" })).toBe("/?view=ignored");
   });
 
-  test("includes status only on the all view, even if passed for another view", () => {
+  test("includes status only on the all/interest views, even if passed for another view", () => {
     expect(buildVacancyHref({ view: "all", status: "applied" })).toBe("/?view=all&status=applied");
+    expect(buildVacancyHref({ view: "interest", status: "applied" })).toBe(
+      "/?view=interest&status=applied"
+    );
     expect(buildVacancyHref({ view: "todo", status: "applied" })).toBe("/?view=todo");
   });
 

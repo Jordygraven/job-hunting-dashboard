@@ -65,9 +65,13 @@ toggle when `row.status === "todo"`, a static indicator glyph when `row.starred`
 ## Clarifications already settled with the owner
 
 - Tab order: **To do, Interest, Applied, All, Success, Rejected, Ignored.**
-- Star control is interactive only on To do rows (To do tab, or To do rows inside All). Every
-  other tab shows a static indicator only — once a starred vacancy leaves To do, it can't be
-  unstarred until Undo returns it to To do.
+- Star control is interactive only on To do rows (To do tab, or To do rows inside All) **and on
+  every row of the Interest tab, regardless of status**. On the Interest tab, unstarring any row
+  inserts `unstarred` and never touches status — a starred Applied/Success/Rejected/Ignored row
+  can be unstarred from Interest without an Undo. Every other tab (To do, Applied, All, Success,
+  Rejected, Ignored) shows a static indicator only for non-todo rows — once a starred vacancy
+  leaves To do, it can't be unstarred there until Undo returns it to To do, or it's unstarred from
+  Interest.
 - Extra files beyond the originally-scoped list were approved and read: `deriveVacancyStatus.ts`,
   `mapVacancyActionRow.ts`, `validation.ts`, `getVacancyTabData.ts`, `vacancySort.ts`,
   `getVacancyStatuses.ts` (pulled in transitively — it's what `getVacancyTabData.ts` calls),
@@ -236,13 +240,16 @@ toggle when `row.status === "todo"`, a static indicator glyph when `row.starred`
 - Mark that Success vacancy Rejected: Applied on still unchanged, Outcome on updates to today.
 - Edit outcome date to a future date via the date input → picker caps at today; if bypassed,
   server rejects.
-- Edit outcome date to a date before the applied date → rejected (ideally picker's `min` also
-  prevents it).
+- Edit outcome date to a date before the applied date → rejected with a clear message that states
+  the applied date (ideally picker's `min` also prevents it).
 - Undo from Success → back to Applied with the *original* applied date, not today.
 - Undo from Rejected (reached via Success) → back to Applied with the *original* applied date
   (confirms the backward-scan survives two outcome hops).
 - Star a To do vacancy → floats to top of the To do tab with no `sort` param active, shows the
   accent highlight.
+- On the Interest tab, unstar an Applied (or Success/Rejected/Ignored) row → row disappears from
+  Interest, status is unchanged (confirm on the Applied/All/etc. tab the vacancy still shows its
+  original status, just no longer starred).
 - Click a column header on a tab with a starred row → explicit sort overrides the starred-first
   default.
 - Apply the starred vacancy → still shows starred (static indicator, no button) in Applied and

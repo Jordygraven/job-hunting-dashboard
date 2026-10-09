@@ -1,20 +1,20 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 let getVacanciesMock: any;
-let getVacancyStatusesMock: any;
+let getVacancyFlagsMock: any;
 
 vi.mock("@/lib/vacancies/getVacancies", () => ({
   getVacancies: (...args: any[]) => getVacanciesMock(...args),
 }));
-vi.mock("./getVacancyStatuses", () => ({
-  getVacancyStatuses: (...args: any[]) => getVacancyStatusesMock(...args),
+vi.mock("./getVacancyFlags", () => ({
+  getVacancyFlags: (...args: any[]) => getVacancyFlagsMock(...args),
 }));
 
 import { getVacancyTabData } from "./getVacancyTabData";
 
 beforeEach(() => {
   getVacanciesMock = vi.fn();
-  getVacancyStatusesMock = vi.fn();
+  getVacancyFlagsMock = vi.fn();
 });
 
 const VACANCIES = [
@@ -23,13 +23,15 @@ const VACANCIES = [
   { id: 3, title: "C", company: "Co C", location: "Penang", url: "https://x/3", firstSeenAt: "2026-10-01T00:00:00.000Z" },
 ];
 
+const EMPTY_COUNTS = { todo: 0, applied: 0, success: 0, rejected: 0, ignored: 0, all: 0, interest: 0 };
+
 describe("getVacancyTabData", () => {
   test("combines vacancies with statuses, defaults to the todo tab, keeps newest-first order", async () => {
     getVacanciesMock.mockResolvedValue(VACANCIES);
-    getVacancyStatusesMock.mockResolvedValue(
+    getVacancyFlagsMock.mockResolvedValue(
       new Map([
-        [2, { status: "applied", appliedOn: "2026-10-02" }],
-        [3, { status: "ignored", reason: "other", date: "2026-10-01" }],
+        [2, { status: { status: "applied", appliedOn: "2026-10-02" }, starred: false }],
+        [3, { status: { status: "ignored", reason: "other", date: "2026-10-01" }, starred: false }],
       ])
     );
 
@@ -37,13 +39,13 @@ describe("getVacancyTabData", () => {
 
     expect(result.view).toBe("todo");
     expect(result.reasonFilter).toBeNull();
-    expect(result.counts).toEqual({ todo: 1, applied: 1, ignored: 1, all: 3 });
+    expect(result.counts).toEqual({ ...EMPTY_COUNTS, todo: 1, applied: 1, ignored: 1, all: 3 });
     expect(result.rows.map((r) => r.id)).toEqual([1]);
   });
 
   test("a vacancy with no status row at all is todo", async () => {
     getVacanciesMock.mockResolvedValue(VACANCIES);
-    getVacancyStatusesMock.mockResolvedValue(new Map());
+    getVacancyFlagsMock.mockResolvedValue(new Map());
 
     const result = await getVacancyTabData({ view: "all" });
 
@@ -52,10 +54,10 @@ describe("getVacancyTabData", () => {
 
   test("the reason filter only narrows the ignored tab's rows, never its counts", async () => {
     getVacanciesMock.mockResolvedValue(VACANCIES);
-    getVacancyStatusesMock.mockResolvedValue(
+    getVacancyFlagsMock.mockResolvedValue(
       new Map([
-        [2, { status: "ignored", reason: "language", date: "2026-10-02" }],
-        [3, { status: "ignored", reason: "other", date: "2026-10-01" }],
+        [2, { status: { status: "ignored", reason: "language", date: "2026-10-02" }, starred: false }],
+        [3, { status: { status: "ignored", reason: "other", date: "2026-10-01" }, starred: false }],
       ])
     );
 
@@ -63,12 +65,12 @@ describe("getVacancyTabData", () => {
 
     expect(result.reasonFilter).toBe("language");
     expect(result.rows.map((r) => r.id)).toEqual([2]);
-    expect(result.counts).toEqual({ todo: 1, applied: 0, ignored: 2, all: 3 });
+    expect(result.counts).toEqual({ ...EMPTY_COUNTS, todo: 1, ignored: 2, all: 3 });
   });
 
   test("an unknown view param falls back to todo", async () => {
     getVacanciesMock.mockResolvedValue(VACANCIES);
-    getVacancyStatusesMock.mockResolvedValue(new Map());
+    getVacancyFlagsMock.mockResolvedValue(new Map());
 
     const result = await getVacancyTabData({ view: "bogus" });
 
@@ -85,7 +87,7 @@ describe("getVacancyTabData", () => {
       firstSeenAt: "2026-10-01T00:00:00.000Z",
     }));
     getVacanciesMock.mockResolvedValue(manyVacancies);
-    getVacancyStatusesMock.mockResolvedValue(new Map());
+    getVacancyFlagsMock.mockResolvedValue(new Map());
 
     const result = await getVacancyTabData({});
 
@@ -104,7 +106,7 @@ describe("getVacancyTabData", () => {
       firstSeenAt: "2026-10-01T00:00:00.000Z",
     }));
     getVacanciesMock.mockResolvedValue(manyVacancies);
-    getVacancyStatusesMock.mockResolvedValue(new Map());
+    getVacancyFlagsMock.mockResolvedValue(new Map());
 
     const result = await getVacancyTabData({ show: "20" });
 
@@ -115,10 +117,10 @@ describe("getVacancyTabData", () => {
 
   test("filteredCount reflects the reason filter, not the global ignored count", async () => {
     getVacanciesMock.mockResolvedValue(VACANCIES);
-    getVacancyStatusesMock.mockResolvedValue(
+    getVacancyFlagsMock.mockResolvedValue(
       new Map([
-        [2, { status: "ignored", reason: "language", date: "2026-10-02" }],
-        [3, { status: "ignored", reason: "other", date: "2026-10-01" }],
+        [2, { status: { status: "ignored", reason: "language", date: "2026-10-02" }, starred: false }],
+        [3, { status: { status: "ignored", reason: "other", date: "2026-10-01" }, starred: false }],
       ])
     );
 
@@ -130,7 +132,7 @@ describe("getVacancyTabData", () => {
 
   test("q narrows rows on every tab, partial and case-insensitive", async () => {
     getVacanciesMock.mockResolvedValue(VACANCIES);
-    getVacancyStatusesMock.mockResolvedValue(new Map());
+    getVacancyFlagsMock.mockResolvedValue(new Map());
 
     const result = await getVacancyTabData({ view: "all", q: "CO B" });
 
@@ -140,7 +142,7 @@ describe("getVacancyTabData", () => {
 
   test("company is an exact match; a non-existent company yields zero rows, not an error", async () => {
     getVacanciesMock.mockResolvedValue(VACANCIES);
-    getVacancyStatusesMock.mockResolvedValue(new Map());
+    getVacancyFlagsMock.mockResolvedValue(new Map());
 
     const exact = await getVacancyTabData({ view: "all", company: "Co B" });
     expect(exact.rows.map((r) => r.id)).toEqual([2]);
@@ -152,7 +154,7 @@ describe("getVacancyTabData", () => {
 
   test("from/to narrow by the KL calendar day of firstSeenAt; from after to yields zero rows", async () => {
     getVacanciesMock.mockResolvedValue(VACANCIES);
-    getVacancyStatusesMock.mockResolvedValue(new Map());
+    getVacancyFlagsMock.mockResolvedValue(new Map());
 
     const inRange = await getVacancyTabData({ view: "all", from: "2026-10-02", to: "2026-10-03" });
     expect(inRange.rows.map((r) => r.id).sort()).toEqual([1, 2]);
@@ -161,39 +163,93 @@ describe("getVacancyTabData", () => {
     expect(empty.rows).toEqual([]);
   });
 
-  test("counts add up with company filter active, ignoring status and reason", async () => {
+  test("counts add up with company filter active, ignoring status and reason; interest is not folded into all", async () => {
     getVacanciesMock.mockResolvedValue(VACANCIES);
-    getVacancyStatusesMock.mockResolvedValue(
+    getVacancyFlagsMock.mockResolvedValue(
       new Map([
-        [2, { status: "ignored", reason: "language", date: "2026-10-02" }],
-        [3, { status: "applied", appliedOn: "2026-10-01" }],
+        [2, { status: { status: "ignored", reason: "language", date: "2026-10-02" }, starred: false }],
+        [3, { status: { status: "applied", appliedOn: "2026-10-01" }, starred: true }],
       ])
     );
 
     const result = await getVacancyTabData({ view: "ignored", reason: "language", company: "Co A" });
 
-    expect(result.counts).toEqual({ todo: 1, applied: 0, ignored: 0, all: 1 });
-    expect(result.counts.todo + result.counts.applied + result.counts.ignored).toBe(result.counts.all);
+    expect(result.counts).toEqual({ ...EMPTY_COUNTS, todo: 1, all: 1 });
+    expect(result.counts.todo + result.counts.applied + result.counts.success + result.counts.rejected + result.counts.ignored).toBe(
+      result.counts.all
+    );
   });
 
-  test("status only narrows rows on the all tab; it's a no-op elsewhere", async () => {
+  test("status narrows rows on the all and interest tabs; it's a no-op elsewhere", async () => {
     getVacanciesMock.mockResolvedValue(VACANCIES);
-    getVacancyStatusesMock.mockResolvedValue(
-      new Map([[2, { status: "applied", appliedOn: "2026-10-02" }]])
+    getVacancyFlagsMock.mockResolvedValue(
+      new Map([[2, { status: { status: "applied", appliedOn: "2026-10-02" }, starred: true }]])
     );
 
     const onAll = await getVacancyTabData({ view: "all", status: "applied" });
     expect(onAll.rows.map((r) => r.id)).toEqual([2]);
     expect(onAll.statusFilter).toBe("applied");
 
+    const onInterest = await getVacancyTabData({ view: "interest", status: "applied" });
+    expect(onInterest.rows.map((r) => r.id)).toEqual([2]);
+    expect(onInterest.statusFilter).toBe("applied");
+
     const onTodo = await getVacancyTabData({ view: "todo", status: "applied" });
     expect(onTodo.statusFilter).toBeNull();
     expect(onTodo.rows.map((r) => r.id).sort()).toEqual([1, 3]);
   });
 
+  test("the interest tab selects starred rows regardless of status", async () => {
+    getVacanciesMock.mockResolvedValue(VACANCIES);
+    getVacancyFlagsMock.mockResolvedValue(
+      new Map([
+        [1, { status: { status: "todo" }, starred: true }],
+        [2, { status: { status: "applied", appliedOn: "2026-10-01" }, starred: true }],
+        [3, { status: { status: "ignored", reason: "other", date: "2026-10-01" }, starred: false }],
+      ])
+    );
+
+    const result = await getVacancyTabData({ view: "interest" });
+
+    expect(result.rows.map((r) => r.id).sort()).toEqual([1, 2]);
+    expect(result.counts.interest).toBe(2);
+  });
+
+  test("the success and rejected tabs select by status", async () => {
+    getVacanciesMock.mockResolvedValue(VACANCIES);
+    getVacancyFlagsMock.mockResolvedValue(
+      new Map([
+        [1, { status: { status: "success", appliedOn: "2026-10-01", outcomeOn: "2026-10-05" }, starred: false }],
+        [2, { status: { status: "rejected", appliedOn: "2026-10-01", outcomeOn: "2026-10-06" }, starred: false }],
+      ])
+    );
+
+    const success = await getVacancyTabData({ view: "success" });
+    expect(success.rows.map((r) => r.id)).toEqual([1]);
+
+    const rejected = await getVacancyTabData({ view: "rejected" });
+    expect(rejected.rows.map((r) => r.id)).toEqual([2]);
+  });
+
+  test("q/company/from/to filters apply on the interest, success, and rejected tabs too", async () => {
+    getVacanciesMock.mockResolvedValue(VACANCIES);
+    getVacancyFlagsMock.mockResolvedValue(
+      new Map([
+        [1, { status: { status: "success", appliedOn: "2026-10-01", outcomeOn: "2026-10-05" }, starred: true }],
+        [2, { status: { status: "success", appliedOn: "2026-10-01", outcomeOn: "2026-10-05" }, starred: true }],
+      ])
+    );
+
+    const interestByCompany = await getVacancyTabData({ view: "interest", company: "Co A" });
+    expect(interestByCompany.rows.map((r) => r.id)).toEqual([1]);
+
+    const successByQuery = await getVacancyTabData({ view: "success", q: "co b" });
+    expect(successByQuery.rows.map((r) => r.id)).toEqual([2]);
+  });
+
   test("companies lists every distinct company across all vacancies, regardless of active filters", async () => {
     getVacanciesMock.mockResolvedValue(VACANCIES);
-    getVacancyStatusesMock.mockResolvedValue(new Map());
+    getVacancyFlagsMock.mockResolvedValue(new Map());
 
     const result = await getVacancyTabData({ view: "all", company: "Co A" });
 
@@ -202,18 +258,19 @@ describe("getVacancyTabData", () => {
 
   test("hasActiveFilters is false with no params, true when any filter is set", async () => {
     getVacanciesMock.mockResolvedValue(VACANCIES);
-    getVacancyStatusesMock.mockResolvedValue(new Map());
+    getVacancyFlagsMock.mockResolvedValue(new Map());
 
     expect((await getVacancyTabData({})).hasActiveFilters).toBe(false);
     expect((await getVacancyTabData({ q: "a" })).hasActiveFilters).toBe(true);
     expect((await getVacancyTabData({ company: "Co A" })).hasActiveFilters).toBe(true);
     expect((await getVacancyTabData({ from: "2026-10-01" })).hasActiveFilters).toBe(true);
     expect((await getVacancyTabData({ view: "all", status: "todo" })).hasActiveFilters).toBe(true);
+    expect((await getVacancyTabData({ view: "interest", status: "todo" })).hasActiveFilters).toBe(true);
   });
 
-  test("with no sort param, row order matches today's default (DB order) exactly", async () => {
+  test("with no sort param, row order matches today's default (DB order) exactly when nothing is starred", async () => {
     getVacanciesMock.mockResolvedValue(VACANCIES);
-    getVacancyStatusesMock.mockResolvedValue(new Map());
+    getVacancyFlagsMock.mockResolvedValue(new Map());
 
     const result = await getVacancyTabData({ view: "all" });
 
@@ -222,9 +279,18 @@ describe("getVacancyTabData", () => {
     expect(result.rows.map((r) => r.id)).toEqual([1, 2, 3]);
   });
 
+  test("with no sort param, a starred row floats to the top of the default order", async () => {
+    getVacanciesMock.mockResolvedValue(VACANCIES);
+    getVacancyFlagsMock.mockResolvedValue(new Map([[3, { status: { status: "todo" }, starred: true }]]));
+
+    const result = await getVacancyTabData({ view: "all" });
+
+    expect(result.rows.map((r) => r.id)).toEqual([3, 1, 2]);
+  });
+
   test("an invalid sort or dir param is ignored, falling back to default order", async () => {
     getVacanciesMock.mockResolvedValue(VACANCIES);
-    getVacancyStatusesMock.mockResolvedValue(new Map());
+    getVacancyFlagsMock.mockResolvedValue(new Map());
 
     const badColumn = await getVacancyTabData({ view: "all", sort: "nope", dir: "asc" });
     expect(badColumn.sort).toBeNull();
@@ -240,14 +306,14 @@ describe("getVacancyTabData", () => {
 
   test("a valid sort changes row order but not counts or filteredCount", async () => {
     getVacanciesMock.mockResolvedValue(VACANCIES);
-    getVacancyStatusesMock.mockResolvedValue(new Map());
+    getVacancyFlagsMock.mockResolvedValue(new Map());
 
     const result = await getVacancyTabData({ view: "all", sort: "title", dir: "desc" });
 
     expect(result.sort).toBe("title");
     expect(result.dir).toBe("desc");
     expect(result.rows.map((r) => r.id)).toEqual([3, 2, 1]);
-    expect(result.counts).toEqual({ todo: 3, applied: 0, ignored: 0, all: 3 });
+    expect(result.counts).toEqual({ ...EMPTY_COUNTS, todo: 3, all: 3 });
     expect(result.filteredCount).toBe(3);
   });
 
@@ -261,7 +327,7 @@ describe("getVacancyTabData", () => {
       firstSeenAt: "2026-10-01T00:00:00.000Z",
     }));
     getVacanciesMock.mockResolvedValue(manyVacancies);
-    getVacancyStatusesMock.mockResolvedValue(new Map());
+    getVacancyFlagsMock.mockResolvedValue(new Map());
 
     const result = await getVacancyTabData({ view: "all", sort: "title", dir: "asc" });
 

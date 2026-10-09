@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { deriveVacancyStatus } from "./deriveVacancyStatus";
+import { deriveStarred, deriveVacancyStatus } from "./deriveVacancyStatus";
 import type { VacancyActionRow } from "./types";
 
 function row(overrides: Partial<VacancyActionRow>): VacancyActionRow {
@@ -9,6 +9,7 @@ function row(overrides: Partial<VacancyActionRow>): VacancyActionRow {
     action: "applied",
     ignoreReason: null,
     appliedOn: null,
+    outcomeOn: null,
     createdAt: "2026-10-01T00:00:00.000Z",
     ...overrides,
   };
@@ -83,5 +84,103 @@ describe("deriveVacancyStatus", () => {
   test("throws if the latest applied row has no appliedOn (a corrupt/impossible row)", () => {
     const rows = [row({ id: 1, action: "applied", appliedOn: null })];
     expect(() => deriveVacancyStatus(rows)).toThrow(/appliedOn/i);
+  });
+
+  test("applied -> success carries the applied date recovered from the preceding applied row, plus outcomeOn", () => {
+    const rows = [
+      row({ id: 1, action: "applied", appliedOn: "2026-10-01" }),
+      row({ id: 2, action: "success", outcomeOn: "2026-10-05" }),
+    ];
+    expect(deriveVacancyStatus(rows)).toEqual({
+      status: "success",
+      appliedOn: "2026-10-01",
+      outcomeOn: "2026-10-05",
+    });
+  });
+
+  test("applied -> success -> rejected recovers the original applied date across two outcome hops", () => {
+    const rows = [
+      row({ id: 1, action: "applied", appliedOn: "2026-10-01" }),
+      row({ id: 2, action: "success", outcomeOn: "2026-10-05" }),
+      row({ id: 3, action: "rejected", outcomeOn: "2026-10-08" }),
+    ];
+    expect(deriveVacancyStatus(rows)).toEqual({
+      status: "rejected",
+      appliedOn: "2026-10-01",
+      outcomeOn: "2026-10-08",
+    });
+  });
+
+  test("throws if a success/rejected row has no preceding applied row (corrupt/impossible history)", () => {
+    const rows = [row({ id: 1, action: "success", outcomeOn: "2026-10-05" })];
+    expect(() => deriveVacancyStatus(rows)).toThrow(/preceding applied row/i);
+  });
+
+  test("throws if the latest success/rejected row has no outcomeOn (a corrupt/impossible row)", () => {
+    const rows = [
+      row({ id: 1, action: "applied", appliedOn: "2026-10-01" }),
+      row({ id: 2, action: "success", outcomeOn: null }),
+    ];
+    expect(() => deriveVacancyStatus(rows)).toThrow(/outcomeOn/i);
+  });
+
+  test("a star row interleaved in the history is invisible to status derivation", () => {
+    const rows = [
+      row({ id: 1, action: "applied", appliedOn: "2026-10-01" }),
+      row({ id: 2, action: "starred" }),
+      row({ id: 3, action: "success", outcomeOn: "2026-10-05" }),
+    ];
+    expect(deriveVacancyStatus(rows)).toEqual({
+      status: "success",
+      appliedOn: "2026-10-01",
+      outcomeOn: "2026-10-05",
+    });
+  });
+});
+
+describe("deriveStarred", () => {
+  test("no rows means not starred", () => {
+    expect(deriveStarred([])).toBe(false);
+  });
+
+  test("a single starred row is starred", () => {
+    expect(deriveStarred([row({ id: 1, action: "starred" })])).toBe(true);
+  });
+
+  test("a single unstarred row is not starred", () => {
+    expect(deriveStarred([row({ id: 1, action: "unstarred" })])).toBe(false);
+  });
+
+  test("latest star row (by id) wins, regardless of array order", () => {
+    const rows = [
+      row({ id: 3, action: "unstarred" }),
+      row({ id: 1, action: "starred" }),
+    ];
+    expect(deriveStarred(rows)).toBe(false);
+  });
+
+  test("a reset row never clears a star — status rows are invisible to star derivation", () => {
+    const rows = [
+      row({ id: 1, action: "applied", appliedOn: "2026-10-01" }),
+      row({ id: 2, action: "starred" }),
+      row({ id: 3, action: "reset" }),
+    ];
+    expect(deriveStarred(rows)).toBe(true);
+    expect(deriveVacancyStatus(rows)).toEqual({ status: "todo" });
+  });
+
+  test("an unstarred row after a rejected row keeps status rejected — star rows are invisible to status derivation", () => {
+    const rows = [
+      row({ id: 1, action: "applied", appliedOn: "2026-10-01" }),
+      row({ id: 2, action: "starred" }),
+      row({ id: 3, action: "rejected", outcomeOn: "2026-10-05" }),
+      row({ id: 4, action: "unstarred" }),
+    ];
+    expect(deriveStarred(rows)).toBe(false);
+    expect(deriveVacancyStatus(rows)).toEqual({
+      status: "rejected",
+      appliedOn: "2026-10-01",
+      outcomeOn: "2026-10-05",
+    });
   });
 });

@@ -17,8 +17,10 @@ function row(overrides: Partial<VacancyTabRow> = {}): VacancyTabRow {
     firstSeenAt: "2026-10-01T00:00:00.000Z",
     status: "todo",
     appliedOn: null,
+    outcomeOn: null,
     ignoredOn: null,
     ignoreReason: null,
+    starred: false,
     ...overrides,
   };
 }
