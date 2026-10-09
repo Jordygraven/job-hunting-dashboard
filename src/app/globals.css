@@ -10,7 +10,12 @@
   --surface-panel: #131318;
   --surface-row: #18181f;
   --surface-row-hover: #1f1f28;
+  --surface-control: #242430;
+  --surface-control-hover: #2d2d3a;
   --border-subtle: #27272f;
+  --border-control: #6e6e72;
+  --border-control-hover: #86868a;
+  --border-accent-subtle: rgba(129, 140, 248, 0.7);
 
   --text-primary: #f4f4f6;
   --text-secondary: #a1a1ab;
@@ -38,6 +43,8 @@
   --radius-sm: 0.375rem;
   --radius-md: 0.625rem;
   --radius-lg: 0.875rem;
+
+  --company-col-min-width: 17rem;
 }
 
 @theme inline {
@@ -50,7 +57,12 @@
   --color-surface-panel: var(--surface-panel);
   --color-surface-row: var(--surface-row);
   --color-surface-row-hover: var(--surface-row-hover);
+  --color-surface-control: var(--surface-control);
+  --color-surface-control-hover: var(--surface-control-hover);
   --color-border-subtle: var(--border-subtle);
+  --color-border-control: var(--border-control);
+  --color-border-control-hover: var(--border-control-hover);
+  --color-border-accent-subtle: var(--border-accent-subtle);
 
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);

@@ -27,14 +27,16 @@ function Pill({ className, children }: { className: string; children: React.Reac
   );
 }
 
-function SortArrow({ dir }: { dir: "asc" | "desc" }) {
+function SortArrow({ dir, faint = false }: { dir: "asc" | "desc"; faint?: boolean }) {
   return (
     <svg
       aria-hidden="true"
       viewBox="0 0 12 12"
       width="10"
       height="10"
-      className={`inline-block shrink-0 ${dir === "desc" ? "rotate-180" : ""}`}
+      className={`inline-block shrink-0 ${dir === "desc" ? "rotate-180" : ""} ${
+        faint ? "text-text-muted opacity-40" : "text-accent"
+      }`}
     >
       <path d="M6 2 L10 8 L2 8 Z" fill="currentColor" />
     </svg>
@@ -47,7 +49,7 @@ function ViewLink({ href }: { href: string }) {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-1 text-text-secondary transition-colors hover:text-accent"
+      className="inline-flex items-center gap-1 rounded-full border border-border-accent-subtle px-3 py-1 text-accent transition-colors hover:bg-accent-muted-bg"
     >
       View
       <svg aria-hidden="true" viewBox="0 0 12 12" width="10" height="10" className="shrink-0">
@@ -80,13 +82,19 @@ function SortableHeader({
   const ariaSort = isActive ? (dir === "asc" ? "ascending" : "descending") : "none";
 
   return (
-    <th scope="col" className="py-2 pr-4 font-medium text-text-secondary" aria-sort={ariaSort}>
+    <th
+      scope="col"
+      className={`py-2 pr-4 font-medium ${
+        column === "company" ? "min-w-[var(--company-col-min-width)]" : ""
+      } ${isActive ? "text-text-primary" : "text-text-secondary"}`}
+      aria-sort={ariaSort}
+    >
       <Link
         href={buildVacancyHref({ ...hrefParams, sort: next.sort, dir: next.dir })}
-        className="inline-flex items-center gap-1 hover:text-text-primary"
+        className="inline-flex items-center gap-1 rounded-sm transition-colors hover:text-accent"
       >
         {columnLabel(column)}
-        {isActive && dir && <SortArrow dir={dir} />}
+        {isActive && dir ? <SortArrow dir={dir} /> : <SortArrow dir="asc" faint />}
       </Link>
     </th>
   );
@@ -165,7 +173,9 @@ export function VacancyTable({
           {rows.map((row) => (
             <tr key={row.id} className="rounded-md bg-surface-row transition-colors hover:bg-surface-row-hover">
               <td className="rounded-l-md py-3 pr-4 pl-4 text-text-primary">{row.title}</td>
-              <td className="py-3 pr-4 text-text-secondary">{row.company}</td>
+              <td className="min-w-[var(--company-col-min-width)] py-3 pr-4 text-text-secondary">
+                {row.company}
+              </td>
               <td className="py-3 pr-4 text-text-secondary">{row.location ?? ""}</td>
               <td className="py-3 pr-4 whitespace-nowrap text-text-secondary">
                 {formatKlDate(row.firstSeenAt)}
