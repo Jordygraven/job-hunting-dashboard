@@ -47,7 +47,6 @@
   --title-col-min-width: 18rem;
   --company-col-min-width: 10rem;
   --location-col-min-width: 9rem;
-  --actions-col-max-width: 300px;
 }
 
 @theme inline {

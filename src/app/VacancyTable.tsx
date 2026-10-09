@@ -29,6 +29,13 @@ const WRAP_ALLOWED_MIN_WIDTH: Partial<Record<SortableColumnKey, string>> = {
   location: "min-w-[var(--location-col-min-width)]",
 };
 
+// The classic auto-table-layout trick: an explicit tiny width tells the
+// browser "give this column no more than its content needs" (it still can't
+// shrink past a min-width floor or past nowrap content's natural width).
+// Title is the one column without this class, so it alone receives whatever
+// width is left over once every other column has claimed only what it needs.
+const SHRINK_TO_CONTENT = "w-[1%]";
+
 function Pill({ className, children }: { className: string; children: React.ReactNode }) {
   return (
     <span
@@ -97,8 +104,8 @@ function SortableHeader({
     <th
       scope="col"
       className={`py-2 pr-3 font-medium whitespace-nowrap ${WRAP_ALLOWED_MIN_WIDTH[column] ?? ""} ${
-        isActive ? "text-text-primary" : "text-text-secondary"
-      }`}
+        column === "title" ? "" : SHRINK_TO_CONTENT
+      } ${isActive ? "text-text-primary" : "text-text-secondary"}`}
       aria-sort={ariaSort}
     >
       <Link
@@ -165,7 +172,10 @@ export function VacancyTable({
             {columns.includes("company") && header("company")}
             {columns.includes("location") && header("location")}
             {columns.includes("firstSeenAt") && header("firstSeenAt")}
-            <th scope="col" className="py-2 pr-3 font-medium whitespace-nowrap text-text-secondary">
+            <th
+              scope="col"
+              className={`py-2 pr-3 font-medium whitespace-nowrap text-text-secondary ${SHRINK_TO_CONTENT}`}
+            >
               Link
             </th>
             {view === "applied" && columns.includes("appliedOn") && header("appliedOn")}
@@ -176,7 +186,10 @@ export function VacancyTable({
               </>
             )}
             {view === "all" && columns.includes("status") && header("status")}
-            <th scope="col" className="py-2 pr-3 font-medium whitespace-nowrap text-text-secondary">
+            <th
+              scope="col"
+              className={`py-2 pr-3 font-medium whitespace-nowrap text-text-secondary ${SHRINK_TO_CONTENT}`}
+            >
               Actions
             </th>
           </tr>
@@ -189,29 +202,33 @@ export function VacancyTable({
               >
                 {row.title}
               </td>
-              <td className={`py-3 pr-3 text-text-secondary ${WRAP_ALLOWED_MIN_WIDTH.company}`}>
+              <td
+                className={`py-3 pr-3 text-text-secondary ${WRAP_ALLOWED_MIN_WIDTH.company} ${SHRINK_TO_CONTENT}`}
+              >
                 {row.company}
               </td>
-              <td className={`py-3 pr-3 text-text-secondary ${WRAP_ALLOWED_MIN_WIDTH.location}`}>
+              <td
+                className={`py-3 pr-3 text-text-secondary ${WRAP_ALLOWED_MIN_WIDTH.location} ${SHRINK_TO_CONTENT}`}
+              >
                 {row.location ?? ""}
               </td>
-              <td className="py-3 pr-3 whitespace-nowrap text-text-secondary">
+              <td className={`py-3 pr-3 whitespace-nowrap text-text-secondary ${SHRINK_TO_CONTENT}`}>
                 {formatKlDate(row.firstSeenAt)}
               </td>
-              <td className="py-3 pr-3 whitespace-nowrap">
+              <td className={`py-3 pr-3 whitespace-nowrap ${SHRINK_TO_CONTENT}`}>
                 <ViewLink href={row.url} />
               </td>
               {view === "applied" && (
-                <td className="py-3 pr-3 whitespace-nowrap text-text-secondary">
+                <td className={`py-3 pr-3 whitespace-nowrap text-text-secondary ${SHRINK_TO_CONTENT}`}>
                   {row.appliedOn ? formatKlDate(row.appliedOn) : ""}
                 </td>
               )}
               {view === "ignored" && (
                 <>
-                  <td className="py-3 pr-3 whitespace-nowrap text-text-secondary">
+                  <td className={`py-3 pr-3 whitespace-nowrap text-text-secondary ${SHRINK_TO_CONTENT}`}>
                     {row.ignoredOn ? formatKlDate(row.ignoredOn) : ""}
                   </td>
-                  <td className="py-3 pr-3 whitespace-nowrap">
+                  <td className={`py-3 pr-3 whitespace-nowrap ${SHRINK_TO_CONTENT}`}>
                     {row.ignoreReason ? (
                       <Pill className="bg-tag-bg text-tag-fg">{REASON_LABELS[row.ignoreReason]}</Pill>
                     ) : (
@@ -221,11 +238,11 @@ export function VacancyTable({
                 </>
               )}
               {view === "all" && (
-                <td className="py-3 pr-3 whitespace-nowrap">
+                <td className={`py-3 pr-3 whitespace-nowrap ${SHRINK_TO_CONTENT}`}>
                   <Pill className={STATUS_PILL_CLASS[row.status]}>{STATUS_LABELS[row.status]}</Pill>
                 </td>
               )}
-              <td className="rounded-r-md py-3 pr-3">
+              <td className={`rounded-r-md py-3 pr-3 whitespace-nowrap ${SHRINK_TO_CONTENT}`}>
                 <VacancyActions vacancyId={row.id} status={row.status} appliedOn={row.appliedOn} />
               </td>
             </tr>

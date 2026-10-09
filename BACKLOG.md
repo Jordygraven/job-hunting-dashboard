@@ -4,6 +4,7 @@
 - Consider ingesting `jobs-noreply@linkedin.com` recommendation emails later. Different layout from the job-alert emails; out of scope for MVP.
 - Store the saved search per vacancy (deferred 5 Oct).
 - Paginate vacancy list (deferred 6 Oct).
+- Epic 9: Applied tab actions get wide with Rejected and Success buttons, consider a compact action menu.
 
 ## Epic 3 (dashboard) deferred Minor findings — 6 Oct
 
