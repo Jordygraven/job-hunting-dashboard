@@ -1,34 +1,49 @@
 import "server-only";
 
 import { getSupabaseServerClient } from "@/lib/supabase/server";
-import { getKlDateString } from "@/lib/format/kualaLumpurDate";
-import { deriveVacancyStatus } from "./deriveVacancyStatus";
+import { getKlDateString, isDateNotInFutureKl, isValidDateString } from "@/lib/format/kualaLumpurDate";
+import { deriveStarred, deriveVacancyStatus } from "./deriveVacancyStatus";
 import { mapVacancyActionRow } from "./mapVacancyActionRow";
 import type { IgnoreReason } from "./types";
-import { isValidAppliedOnDate, isValidIgnoreReason, isValidVacancyId } from "./validation";
+import {
+  isValidAppliedOnDate,
+  isValidIgnoreReason,
+  isValidOutcomeOnDate,
+  isValidVacancyId,
+} from "./validation";
 import { SAFE_ERROR_MESSAGE } from "./errors";
 
 export type WriteVacancyActionInput =
   | { intent: "apply"; vacancyId: number }
   | { intent: "ignore"; vacancyId: number; reason?: IgnoreReason }
   | { intent: "undo"; vacancyId: number }
-  | { intent: "editAppliedDate"; vacancyId: number; appliedOn: string };
+  | { intent: "editAppliedDate"; vacancyId: number; appliedOn: string }
+  | { intent: "markSuccess"; vacancyId: number }
+  | { intent: "markReject"; vacancyId: number }
+  | { intent: "editOutcomeDate"; vacancyId: number; outcomeOn: string }
+  | { intent: "star"; vacancyId: number }
+  | { intent: "unstar"; vacancyId: number };
 
 export type WriteVacancyActionResult = { ok: true } | { ok: false; error: string };
 
 type VacancyActionInsertRow =
   | { vacancy_id: number; action: "applied"; applied_on: string }
   | { vacancy_id: number; action: "ignored"; ignore_reason: IgnoreReason | null }
-  | { vacancy_id: number; action: "reset" };
+  | { vacancy_id: number; action: "reset" }
+  | { vacancy_id: number; action: "success"; outcome_on: string }
+  | { vacancy_id: number; action: "rejected"; outcome_on: string }
+  | { vacancy_id: number; action: "starred" }
+  | { vacancy_id: number; action: "unstarred" };
 
 // supabase-js's insert() overloads can't resolve a union argument; widen to this
 // flat shape for the call itself, while construction above stays a discriminated
 // union so each branch can't pair the wrong field with the wrong action.
 type VacancyActionInsertPayload = {
   vacancy_id: number;
-  action: "applied" | "ignored" | "reset";
+  action: "applied" | "ignored" | "reset" | "success" | "rejected" | "starred" | "unstarred";
   applied_on?: string;
   ignore_reason?: IgnoreReason | null;
+  outcome_on?: string;
 };
 
 export async function writeVacancyAction(
@@ -68,7 +83,7 @@ export async function writeVacancyAction(
 
   const { data: actionRows, error: fetchError } = await supabase
     .from("vacancy_actions")
-    .select("id, vacancy_id, action, ignore_reason, applied_on, created_at")
+    .select("id, vacancy_id, action, ignore_reason, applied_on, outcome_on, created_at")
     .eq("vacancy_id", input.vacancyId)
     .order("id", { ascending: true });
 
@@ -79,6 +94,7 @@ export async function writeVacancyAction(
   const rows = (actionRows ?? []).map(mapVacancyActionRow);
 
   const currentStatus = deriveVacancyStatus(rows);
+  const starred = deriveStarred(rows);
 
   if (input.intent === "apply" && currentStatus.status === "applied") {
     return { ok: false, error: "Already marked as applied." };
@@ -99,15 +115,85 @@ export async function writeVacancyAction(
   ) {
     return { ok: true };
   }
+  if (input.intent === "markSuccess" && currentStatus.status !== "applied") {
+    return { ok: false, error: "Can only mark as success once applied." };
+  }
+  if (
+    input.intent === "markReject" &&
+    currentStatus.status !== "applied" &&
+    currentStatus.status !== "success"
+  ) {
+    return { ok: false, error: "Can only reject once applied or marked as success." };
+  }
+  if (input.intent === "editOutcomeDate" && currentStatus.status !== "success" && currentStatus.status !== "rejected") {
+    return { ok: false, error: "Can only edit the outcome date once there's an outcome." };
+  }
+  if (input.intent === "editOutcomeDate" && (currentStatus.status === "success" || currentStatus.status === "rejected")) {
+    const appliedOn = currentStatus.appliedOn;
+    const hasValidOutcomeOn = isValidOutcomeOnDate(input.outcomeOn, appliedOn);
+    if (!hasValidOutcomeOn) {
+      if (
+        isValidDateString(input.outcomeOn) &&
+        isDateNotInFutureKl(input.outcomeOn) &&
+        input.outcomeOn < appliedOn
+      ) {
+        return {
+          ok: false,
+          error: `Outcome date can't be before the applied date (${appliedOn}).`,
+        };
+      }
+      return { ok: false, error: "Invalid date." };
+    }
+    if (input.outcomeOn === currentStatus.outcomeOn) {
+      return { ok: true };
+    }
+  }
+  if (input.intent === "star" && currentStatus.status !== "todo") {
+    return { ok: false, error: "Can only star a To do vacancy." };
+  }
+  if (input.intent === "star" && starred) {
+    return { ok: false, error: "Already starred." };
+  }
+  if (input.intent === "unstar" && !starred) {
+    return { ok: false, error: "Not starred." };
+  }
 
-  const insertRow: VacancyActionInsertRow =
-    input.intent === "apply"
-      ? { vacancy_id: input.vacancyId, action: "applied", applied_on: getKlDateString() }
-      : input.intent === "ignore"
-        ? { vacancy_id: input.vacancyId, action: "ignored", ignore_reason: input.reason ?? null }
-        : input.intent === "undo"
-          ? { vacancy_id: input.vacancyId, action: "reset" }
-          : { vacancy_id: input.vacancyId, action: "applied", applied_on: input.appliedOn };
+  let insertRow: VacancyActionInsertRow;
+  switch (input.intent) {
+    case "apply":
+      insertRow = { vacancy_id: input.vacancyId, action: "applied", applied_on: getKlDateString() };
+      break;
+    case "ignore":
+      insertRow = { vacancy_id: input.vacancyId, action: "ignored", ignore_reason: input.reason ?? null };
+      break;
+    case "undo":
+      insertRow =
+        currentStatus.status === "success" || currentStatus.status === "rejected"
+          ? { vacancy_id: input.vacancyId, action: "applied", applied_on: currentStatus.appliedOn }
+          : { vacancy_id: input.vacancyId, action: "reset" };
+      break;
+    case "editAppliedDate":
+      insertRow = { vacancy_id: input.vacancyId, action: "applied", applied_on: input.appliedOn };
+      break;
+    case "markSuccess":
+      insertRow = { vacancy_id: input.vacancyId, action: "success", outcome_on: getKlDateString() };
+      break;
+    case "markReject":
+      insertRow = { vacancy_id: input.vacancyId, action: "rejected", outcome_on: getKlDateString() };
+      break;
+    case "editOutcomeDate":
+      insertRow =
+        currentStatus.status === "rejected"
+          ? { vacancy_id: input.vacancyId, action: "rejected", outcome_on: input.outcomeOn }
+          : { vacancy_id: input.vacancyId, action: "success", outcome_on: input.outcomeOn };
+      break;
+    case "star":
+      insertRow = { vacancy_id: input.vacancyId, action: "starred" };
+      break;
+    case "unstar":
+      insertRow = { vacancy_id: input.vacancyId, action: "unstarred" };
+      break;
+  }
 
   const { error: insertError } = await supabase
     .from("vacancy_actions")

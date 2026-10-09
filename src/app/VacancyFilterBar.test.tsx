@@ -100,6 +100,25 @@ describe("VacancyFilterBar", () => {
     expect(screen.getByLabelText("Status")).toHaveValue("applied");
   });
 
+  test("status dropdown also renders on the interest tab, and includes Success/Rejected options", () => {
+    render(
+      <VacancyFilterBar
+        view="interest"
+        reasonFilter={null}
+        q={null}
+        company={null}
+        from={null}
+        to={null}
+        status="success"
+        companies={[]}
+        hasActiveFilters={true}
+      />
+    );
+    expect(screen.getByLabelText("Status")).toHaveValue("success");
+    expect(screen.getByRole("option", { name: "Success" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Rejected" })).toBeInTheDocument();
+  });
+
   test("carries view and reason as hidden fields", () => {
     render(
       <VacancyFilterBar

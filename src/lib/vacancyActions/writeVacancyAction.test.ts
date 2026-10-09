@@ -35,12 +35,26 @@ function mockTables({
   actionRows?: { data: unknown; error: unknown };
   insertResult?: { error: unknown };
 } = {}) {
+  insertMock.mockClear();
   insertMock.mockResolvedValue(insertResult);
   const vacancies = vacanciesTable(vacancy);
   const actions = vacancyActionsTable(actionRows);
   fromMock.mockImplementation((table: string) => (table === "vacancies" ? vacancies.table : actions.table));
   getSupabaseServerClientMock.mockImplementation(() => ({ from: fromMock }));
   return { vacancies, actions };
+}
+
+function actionRow(overrides: Record<string, unknown>) {
+  return {
+    id: 1,
+    vacancy_id: 1,
+    action: "applied",
+    ignore_reason: null,
+    applied_on: null,
+    outcome_on: null,
+    created_at: "2026-10-01T00:00:00.000Z",
+    ...overrides,
+  };
 }
 
 beforeEach(() => {
@@ -97,14 +111,14 @@ describe("writeVacancyAction vacancy existence", () => {
 
 describe("writeVacancyAction guards", () => {
   test("apply is rejected when already applied", async () => {
-    mockTables({ actionRows: { data: [{ id: 1, vacancy_id: 1, action: "applied", ignore_reason: null, applied_on: "2026-10-01", created_at: "2026-10-01T00:00:00.000Z" }], error: null } });
+    mockTables({ actionRows: { data: [actionRow({ action: "applied", applied_on: "2026-10-01" })], error: null } });
     const result = await writeVacancyAction({ intent: "apply", vacancyId: 1 });
     expect(result).toEqual({ ok: false, error: "Already marked as applied." });
     expect(insertMock).not.toHaveBeenCalled();
   });
 
   test("ignore is rejected when already ignored", async () => {
-    mockTables({ actionRows: { data: [{ id: 1, vacancy_id: 1, action: "ignored", ignore_reason: "other", applied_on: null, created_at: "2026-10-01T00:00:00.000Z" }], error: null } });
+    mockTables({ actionRows: { data: [actionRow({ action: "ignored", ignore_reason: "other" })], error: null } });
     const result = await writeVacancyAction({ intent: "ignore", vacancyId: 1, reason: "language" });
     expect(result).toEqual({ ok: false, error: "Already marked as ignored." });
     expect(insertMock).not.toHaveBeenCalled();
@@ -123,9 +137,123 @@ describe("writeVacancyAction guards", () => {
     expect(todo).toEqual({ ok: false, error: "Can only edit the date once applied." });
     expect(insertMock).not.toHaveBeenCalled();
 
-    mockTables({ actionRows: { data: [{ id: 1, vacancy_id: 1, action: "ignored", ignore_reason: "other", applied_on: null, created_at: "2026-10-01T00:00:00.000Z" }], error: null } });
+    mockTables({ actionRows: { data: [actionRow({ action: "ignored", ignore_reason: "other" })], error: null } });
     const ignored = await writeVacancyAction({ intent: "editAppliedDate", vacancyId: 1, appliedOn: "2026-10-01" });
     expect(ignored).toEqual({ ok: false, error: "Can only edit the date once applied." });
+    expect(insertMock).not.toHaveBeenCalled();
+  });
+
+  test("markSuccess is rejected from todo, ignored, success, or rejected", async () => {
+    for (const rows of [
+      [],
+      [actionRow({ action: "ignored", ignore_reason: "other" })],
+      [
+        actionRow({ id: 1, action: "applied", applied_on: "2026-10-01" }),
+        actionRow({ id: 2, action: "success", outcome_on: "2026-10-05" }),
+      ],
+      [
+        actionRow({ id: 1, action: "applied", applied_on: "2026-10-01" }),
+        actionRow({ id: 2, action: "rejected", outcome_on: "2026-10-05" }),
+      ],
+    ]) {
+      mockTables({ actionRows: { data: rows, error: null } });
+      const result = await writeVacancyAction({ intent: "markSuccess", vacancyId: 1 });
+      expect(result).toEqual({ ok: false, error: "Can only mark as success once applied." });
+      expect(insertMock).not.toHaveBeenCalled();
+    }
+  });
+
+  test("markSuccess is allowed from applied", async () => {
+    mockTables({ actionRows: { data: [actionRow({ action: "applied", applied_on: "2026-10-01" })], error: null } });
+    const result = await writeVacancyAction({ intent: "markSuccess", vacancyId: 1 });
+    expect(result).toEqual({ ok: true });
+  });
+
+  test("markReject is allowed from applied and from success; rejected from todo, ignored, and rejected", async () => {
+    mockTables({ actionRows: { data: [actionRow({ action: "applied", applied_on: "2026-10-01" })], error: null } });
+    expect(await writeVacancyAction({ intent: "markReject", vacancyId: 1 })).toEqual({ ok: true });
+
+    mockTables({
+      actionRows: {
+        data: [
+          actionRow({ id: 1, action: "applied", applied_on: "2026-10-01" }),
+          actionRow({ id: 2, action: "success", outcome_on: "2026-10-05" }),
+        ],
+        error: null,
+      },
+    });
+    expect(await writeVacancyAction({ intent: "markReject", vacancyId: 1 })).toEqual({ ok: true });
+
+    for (const rows of [
+      [],
+      [actionRow({ action: "ignored", ignore_reason: "other" })],
+      [
+        actionRow({ id: 1, action: "applied", applied_on: "2026-10-01" }),
+        actionRow({ id: 2, action: "rejected", outcome_on: "2026-10-05" }),
+      ],
+    ]) {
+      mockTables({ actionRows: { data: rows, error: null } });
+      const result = await writeVacancyAction({ intent: "markReject", vacancyId: 1 });
+      expect(result).toEqual({ ok: false, error: "Can only reject once applied or marked as success." });
+      expect(insertMock).not.toHaveBeenCalled();
+    }
+  });
+
+  test("editOutcomeDate is rejected unless currently success or rejected", async () => {
+    mockTables({ actionRows: { data: [], error: null } });
+    const result = await writeVacancyAction({ intent: "editOutcomeDate", vacancyId: 1, outcomeOn: "2026-10-01" });
+    expect(result).toEqual({ ok: false, error: "Can only edit the outcome date once there's an outcome." });
+    expect(insertMock).not.toHaveBeenCalled();
+  });
+
+  test("editOutcomeDate rejects a date before the applied date with a message naming the applied date", async () => {
+    mockTables({
+      actionRows: {
+        data: [
+          actionRow({ id: 1, action: "applied", applied_on: "2026-10-05" }),
+          actionRow({ id: 2, action: "success", outcome_on: "2026-10-08" }),
+        ],
+        error: null,
+      },
+    });
+    const result = await writeVacancyAction({ intent: "editOutcomeDate", vacancyId: 1, outcomeOn: "2026-10-04" });
+    expect(result).toEqual({
+      ok: false,
+      error: "Outcome date can't be before the applied date (2026-10-05).",
+    });
+    expect(insertMock).not.toHaveBeenCalled();
+  });
+
+  test("editOutcomeDate rejects a malformed or future date with the generic invalid-date message", async () => {
+    mockTables({
+      actionRows: {
+        data: [
+          actionRow({ id: 1, action: "applied", applied_on: "2026-10-01" }),
+          actionRow({ id: 2, action: "success", outcome_on: "2026-10-05" }),
+        ],
+        error: null,
+      },
+    });
+    const malformed = await writeVacancyAction({ intent: "editOutcomeDate", vacancyId: 1, outcomeOn: "not-a-date" });
+    expect(malformed).toEqual({ ok: false, error: "Invalid date." });
+  });
+
+  test("star is rejected unless currently todo, or already starred", async () => {
+    mockTables({ actionRows: { data: [actionRow({ action: "ignored", ignore_reason: "other" })], error: null } });
+    const notTodo = await writeVacancyAction({ intent: "star", vacancyId: 1 });
+    expect(notTodo).toEqual({ ok: false, error: "Can only star a To do vacancy." });
+    expect(insertMock).not.toHaveBeenCalled();
+
+    mockTables({ actionRows: { data: [actionRow({ action: "starred" })], error: null } });
+    const alreadyStarred = await writeVacancyAction({ intent: "star", vacancyId: 1 });
+    expect(alreadyStarred).toEqual({ ok: false, error: "Already starred." });
+    expect(insertMock).not.toHaveBeenCalled();
+  });
+
+  test("unstar is rejected when not currently starred", async () => {
+    mockTables({ actionRows: { data: [], error: null } });
+    const result = await writeVacancyAction({ intent: "unstar", vacancyId: 1 });
+    expect(result).toEqual({ ok: false, error: "Not starred." });
     expect(insertMock).not.toHaveBeenCalled();
   });
 });
@@ -145,7 +273,7 @@ describe("writeVacancyAction success paths", () => {
   });
 
   test("apply from ignored is allowed (re-applying after ignoring)", async () => {
-    mockTables({ actionRows: { data: [{ id: 1, vacancy_id: 1, action: "ignored", ignore_reason: "other", applied_on: null, created_at: "2026-10-01T00:00:00.000Z" }], error: null } });
+    mockTables({ actionRows: { data: [actionRow({ action: "ignored", ignore_reason: "other" })], error: null } });
     const result = await writeVacancyAction({ intent: "apply", vacancyId: 1 });
     expect(result).toEqual({ ok: true });
   });
@@ -165,24 +293,189 @@ describe("writeVacancyAction success paths", () => {
   });
 
   test("undo from applied inserts a reset row with no applied_on or ignore_reason", async () => {
-    mockTables({ actionRows: { data: [{ id: 1, vacancy_id: 1, action: "applied", ignore_reason: null, applied_on: "2026-10-01", created_at: "2026-10-01T00:00:00.000Z" }], error: null } });
+    mockTables({ actionRows: { data: [actionRow({ action: "applied", applied_on: "2026-10-01" })], error: null } });
     const result = await writeVacancyAction({ intent: "undo", vacancyId: 1 });
     expect(result).toEqual({ ok: true });
     expect(insertMock).toHaveBeenCalledWith({ vacancy_id: 1, action: "reset" });
   });
 
   test("editAppliedDate while applied inserts a new applied row with the given date", async () => {
-    mockTables({ actionRows: { data: [{ id: 1, vacancy_id: 1, action: "applied", ignore_reason: null, applied_on: "2026-10-01", created_at: "2026-10-01T00:00:00.000Z" }], error: null } });
+    mockTables({ actionRows: { data: [actionRow({ action: "applied", applied_on: "2026-10-01" })], error: null } });
     const result = await writeVacancyAction({ intent: "editAppliedDate", vacancyId: 1, appliedOn: "2026-10-03" });
     expect(result).toEqual({ ok: true });
     expect(insertMock).toHaveBeenCalledWith({ vacancy_id: 1, action: "applied", applied_on: "2026-10-03" });
   });
 
   test("editAppliedDate is a no-op when the date matches the current applied date", async () => {
-    mockTables({ actionRows: { data: [{ id: 1, vacancy_id: 1, action: "applied", ignore_reason: null, applied_on: "2026-10-01", created_at: "2026-10-01T00:00:00.000Z" }], error: null } });
+    mockTables({ actionRows: { data: [actionRow({ action: "applied", applied_on: "2026-10-01" })], error: null } });
     const result = await writeVacancyAction({ intent: "editAppliedDate", vacancyId: 1, appliedOn: "2026-10-01" });
     expect(result).toEqual({ ok: true });
     expect(insertMock).not.toHaveBeenCalled();
+  });
+
+  test("markSuccess inserts a success row dated today in KL, with no applied_on duplicated", async () => {
+    mockTables({ actionRows: { data: [actionRow({ action: "applied", applied_on: "2026-10-01" })], error: null } });
+    const result = await writeVacancyAction({ intent: "markSuccess", vacancyId: 1 });
+    expect(result).toEqual({ ok: true });
+    expect(insertMock).toHaveBeenCalledWith({
+      vacancy_id: 1,
+      action: "success",
+      outcome_on: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+    });
+  });
+
+  test("markReject from success inserts a rejected row dated today in KL", async () => {
+    mockTables({
+      actionRows: {
+        data: [
+          actionRow({ id: 1, action: "applied", applied_on: "2026-10-01" }),
+          actionRow({ id: 2, action: "success", outcome_on: "2026-10-05" }),
+        ],
+        error: null,
+      },
+    });
+    const result = await writeVacancyAction({ intent: "markReject", vacancyId: 1 });
+    expect(result).toEqual({ ok: true });
+    expect(insertMock).toHaveBeenCalledWith({
+      vacancy_id: 1,
+      action: "rejected",
+      outcome_on: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+    });
+  });
+
+  test("undo from success inserts applied with the original applied date, not today", async () => {
+    mockTables({
+      actionRows: {
+        data: [
+          actionRow({ id: 1, action: "applied", applied_on: "2026-10-01" }),
+          actionRow({ id: 2, action: "success", outcome_on: "2026-10-05" }),
+        ],
+        error: null,
+      },
+    });
+    const result = await writeVacancyAction({ intent: "undo", vacancyId: 1 });
+    expect(result).toEqual({ ok: true });
+    expect(insertMock).toHaveBeenCalledWith({ vacancy_id: 1, action: "applied", applied_on: "2026-10-01" });
+  });
+
+  test("undo from rejected (reached via success) inserts applied with the original applied date, surviving two outcome hops", async () => {
+    mockTables({
+      actionRows: {
+        data: [
+          actionRow({ id: 1, action: "applied", applied_on: "2026-10-01" }),
+          actionRow({ id: 2, action: "success", outcome_on: "2026-10-05" }),
+          actionRow({ id: 3, action: "rejected", outcome_on: "2026-10-08" }),
+        ],
+        error: null,
+      },
+    });
+    const result = await writeVacancyAction({ intent: "undo", vacancyId: 1 });
+    expect(result).toEqual({ ok: true });
+    expect(insertMock).toHaveBeenCalledWith({ vacancy_id: 1, action: "applied", applied_on: "2026-10-01" });
+  });
+
+  test("editOutcomeDate while success inserts a new success row with the given date", async () => {
+    mockTables({
+      actionRows: {
+        data: [
+          actionRow({ id: 1, action: "applied", applied_on: "2026-10-01" }),
+          actionRow({ id: 2, action: "success", outcome_on: "2026-10-05" }),
+        ],
+        error: null,
+      },
+    });
+    const result = await writeVacancyAction({ intent: "editOutcomeDate", vacancyId: 1, outcomeOn: "2026-10-06" });
+    expect(result).toEqual({ ok: true });
+    expect(insertMock).toHaveBeenCalledWith({ vacancy_id: 1, action: "success", outcome_on: "2026-10-06" });
+  });
+
+  test("editOutcomeDate while rejected inserts a new rejected row, not success", async () => {
+    mockTables({
+      actionRows: {
+        data: [
+          actionRow({ id: 1, action: "applied", applied_on: "2026-10-01" }),
+          actionRow({ id: 2, action: "rejected", outcome_on: "2026-10-05" }),
+        ],
+        error: null,
+      },
+    });
+    const result = await writeVacancyAction({ intent: "editOutcomeDate", vacancyId: 1, outcomeOn: "2026-10-06" });
+    expect(result).toEqual({ ok: true });
+    expect(insertMock).toHaveBeenCalledWith({ vacancy_id: 1, action: "rejected", outcome_on: "2026-10-06" });
+  });
+
+  test("editOutcomeDate is a no-op when the date matches the current outcome date, leaving the old row untouched", async () => {
+    mockTables({
+      actionRows: {
+        data: [
+          actionRow({ id: 1, action: "applied", applied_on: "2026-10-01" }),
+          actionRow({ id: 2, action: "success", outcome_on: "2026-10-05" }),
+        ],
+        error: null,
+      },
+    });
+    const result = await writeVacancyAction({ intent: "editOutcomeDate", vacancyId: 1, outcomeOn: "2026-10-05" });
+    expect(result).toEqual({ ok: true });
+    expect(insertMock).not.toHaveBeenCalled();
+  });
+
+  test("editOutcomeDate accepts a date equal to the applied date", async () => {
+    mockTables({
+      actionRows: {
+        data: [
+          actionRow({ id: 1, action: "applied", applied_on: "2026-10-01" }),
+          actionRow({ id: 2, action: "success", outcome_on: "2026-10-05" }),
+        ],
+        error: null,
+      },
+    });
+    const result = await writeVacancyAction({ intent: "editOutcomeDate", vacancyId: 1, outcomeOn: "2026-10-01" });
+    expect(result).toEqual({ ok: true });
+    expect(insertMock).toHaveBeenCalledWith({ vacancy_id: 1, action: "success", outcome_on: "2026-10-01" });
+  });
+
+  test("star from todo inserts a starred row with no other fields", async () => {
+    mockTables({ actionRows: { data: [], error: null } });
+    const result = await writeVacancyAction({ intent: "star", vacancyId: 1 });
+    expect(result).toEqual({ ok: true });
+    expect(insertMock).toHaveBeenCalledWith({ vacancy_id: 1, action: "starred" });
+  });
+
+  test("unstar from todo inserts an unstarred row with no other fields", async () => {
+    mockTables({ actionRows: { data: [actionRow({ action: "starred" })], error: null } });
+    const result = await writeVacancyAction({ intent: "unstar", vacancyId: 1 });
+    expect(result).toEqual({ ok: true });
+    expect(insertMock).toHaveBeenCalledWith({ vacancy_id: 1, action: "unstarred" });
+  });
+
+  test("unstar is allowed from any status (the Interest tab's unstar), and never touches the status row history", async () => {
+    mockTables({
+      actionRows: {
+        data: [
+          actionRow({ id: 1, action: "applied", applied_on: "2026-10-01" }),
+          actionRow({ id: 2, action: "starred" }),
+          actionRow({ id: 3, action: "success", outcome_on: "2026-10-05" }),
+        ],
+        error: null,
+      },
+    });
+    const result = await writeVacancyAction({ intent: "unstar", vacancyId: 1 });
+    expect(result).toEqual({ ok: true });
+    expect(insertMock).toHaveBeenCalledWith({ vacancy_id: 1, action: "unstarred" });
+    expect(insertMock).not.toHaveBeenCalledWith(expect.objectContaining({ action: "applied" }));
+    expect(insertMock).not.toHaveBeenCalledWith(expect.objectContaining({ action: "reset" }));
+  });
+
+  test("unstar is allowed on an ignored vacancy too", async () => {
+    mockTables({
+      actionRows: {
+        data: [actionRow({ id: 1, action: "ignored", ignore_reason: "other" }), actionRow({ id: 2, action: "starred" })],
+        error: null,
+      },
+    });
+    const result = await writeVacancyAction({ intent: "unstar", vacancyId: 1 });
+    expect(result).toEqual({ ok: true });
+    expect(insertMock).toHaveBeenCalledWith({ vacancy_id: 1, action: "unstarred" });
   });
 });
 

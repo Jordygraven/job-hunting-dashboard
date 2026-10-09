@@ -6,7 +6,7 @@ import type { FormEvent, MouseEvent } from "react";
 import { buildVacancyHref, type VacancyHrefParams } from "@/lib/vacancyActions/vacancyLinks";
 import { statusFilterAppliesToView, STATUS_LABELS, type VacancyStatusFilter } from "@/lib/vacancyActions/vacancyTabs";
 
-const STATUS_OPTIONS: VacancyStatusFilter[] = ["todo", "applied", "ignored"];
+const STATUS_OPTIONS: VacancyStatusFilter[] = ["todo", "applied", "success", "rejected", "ignored"];
 const inputClass =
   "rounded-sm border border-border-subtle bg-surface-row px-2 py-1 text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
 const buttonClass =

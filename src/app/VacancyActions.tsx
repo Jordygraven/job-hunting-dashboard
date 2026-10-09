@@ -2,13 +2,13 @@
 "use client";
 
 import { useState } from "react";
-import { apply, editAppliedDate, ignore, undo } from "./actions";
+import { apply, editAppliedDate, editOutcomeDate, ignore, markReject, markSuccess, undo } from "./actions";
 import { IGNORE_REASONS, REASON_LABELS } from "@/lib/vacancyActions/validation";
 import { SAFE_ERROR_MESSAGE } from "@/lib/vacancyActions/errors";
 import { getKlDateString } from "@/lib/format/kualaLumpurDate";
 import type { IgnoreReason } from "@/lib/vacancyActions/types";
 
-type VacancyRowStatus = "todo" | "applied" | "ignored";
+type VacancyRowStatus = "todo" | "applied" | "ignored" | "success" | "rejected";
 type ActionResult = { ok: true } | { ok: false; error: string };
 
 const GHOST_CLASS =
@@ -26,16 +26,20 @@ export function VacancyActions({
   vacancyId,
   status,
   appliedOn = null,
+  outcomeOn = null,
 }: {
   vacancyId: number;
   status: VacancyRowStatus;
   appliedOn?: string | null;
+  outcomeOn?: string | null;
 }) {
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reasonValue, setReasonValue] = useState<IgnoreReason | "">("");
   const [isEditingDate, setIsEditingDate] = useState(false);
   const [dateValue, setDateValue] = useState(appliedOn ?? "");
+  const [isEditingOutcomeDate, setIsEditingOutcomeDate] = useState(false);
+  const [outcomeDateValue, setOutcomeDateValue] = useState(outcomeOn ?? "");
 
   async function run(action: () => Promise<ActionResult>) {
     setIsPending(true);
@@ -90,6 +94,35 @@ export function VacancyActions({
     }
   }
 
+  function openOutcomeDateEditor() {
+    setOutcomeDateValue(outcomeOn ?? "");
+    setError(null);
+    setIsEditingOutcomeDate(true);
+  }
+
+  function cancelOutcomeDateEdit() {
+    setOutcomeDateValue(outcomeOn ?? "");
+    setError(null);
+    setIsEditingOutcomeDate(false);
+  }
+
+  async function handleSaveOutcomeDate() {
+    setIsPending(true);
+    setError(null);
+    try {
+      const result = await editOutcomeDate(vacancyId, outcomeDateValue);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setIsEditingOutcomeDate(false);
+    } catch {
+      setError(SAFE_ERROR_MESSAGE);
+    } finally {
+      setIsPending(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-1">
       <div className="flex flex-nowrap items-center gap-2 whitespace-nowrap">
@@ -121,6 +154,35 @@ export function VacancyActions({
               Cancel
             </button>
           </>
+        ) : isEditingOutcomeDate ? (
+          <>
+            <input
+              type="date"
+              aria-label="Outcome on"
+              className={GHOST_CLASS}
+              value={outcomeDateValue}
+              max={getKlDateString()}
+              min={appliedOn ?? undefined}
+              disabled={isPending}
+              onChange={(event) => setOutcomeDateValue(event.target.value)}
+            />
+            <button
+              type="button"
+              className={GHOST_CLASS}
+              disabled={isPending || outcomeDateValue === outcomeOn}
+              onClick={handleSaveOutcomeDate}
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              className={GHOST_CLASS}
+              disabled={isPending}
+              onClick={cancelOutcomeDateEdit}
+            >
+              Cancel
+            </button>
+          </>
         ) : (
           <>
             {status === "todo" && (
@@ -131,6 +193,38 @@ export function VacancyActions({
                 onClick={() => run(() => apply(vacancyId))}
               >
                 Applied
+              </button>
+            )}
+
+            {status === "applied" && (
+              <>
+                <button
+                  type="button"
+                  className={GHOST_CLASS}
+                  disabled={isPending}
+                  onClick={() => run(() => markSuccess(vacancyId))}
+                >
+                  Success
+                </button>
+                <button
+                  type="button"
+                  className={GHOST_CLASS}
+                  disabled={isPending}
+                  onClick={() => run(() => markReject(vacancyId))}
+                >
+                  Reject
+                </button>
+              </>
+            )}
+
+            {status === "success" && (
+              <button
+                type="button"
+                className={GHOST_CLASS}
+                disabled={isPending}
+                onClick={() => run(() => markReject(vacancyId))}
+              >
+                Reject
               </button>
             )}
 
@@ -162,7 +256,7 @@ export function VacancyActions({
               </>
             )}
 
-            {(status === "applied" || status === "ignored") && (
+            {(status === "applied" || status === "ignored" || status === "success" || status === "rejected") && (
               <button
                 type="button"
                 className={GHOST_CLASS}
@@ -181,6 +275,17 @@ export function VacancyActions({
                 onClick={openDateEditor}
               >
                 Edit date
+              </button>
+            )}
+
+            {(status === "success" || status === "rejected") && (
+              <button
+                type="button"
+                className={GHOST_CLASS}
+                disabled={isPending}
+                onClick={openOutcomeDateEditor}
+              >
+                Edit outcome date
               </button>
             )}
           </>

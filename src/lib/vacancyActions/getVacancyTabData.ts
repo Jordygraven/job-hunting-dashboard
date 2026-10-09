@@ -1,7 +1,7 @@
 import "server-only";
 
 import { getVacancies } from "@/lib/vacancies/getVacancies";
-import { getVacancyStatuses } from "./getVacancyStatuses";
+import { getVacancyFlags } from "./getVacancyFlags";
 import { distinctCompaniesSorted, matchesVacancyFilters, resolveVacancyFilters } from "./vacancyFilters";
 import {
   buildVacancyTabRow,
@@ -53,11 +53,12 @@ export type VacancyTabData = {
 };
 
 export async function getVacancyTabData(params: VacancyTabSearchParams): Promise<VacancyTabData> {
-  const [vacancies, statuses] = await Promise.all([getVacancies(), getVacancyStatuses()]);
+  const [vacancies, flags] = await Promise.all([getVacancies(), getVacancyFlags()]);
 
-  const allRows = vacancies.map((vacancy) =>
-    buildVacancyTabRow(vacancy, statuses.get(vacancy.id) ?? { status: "todo" })
-  );
+  const allRows = vacancies.map((vacancy) => {
+    const flag = flags.get(vacancy.id) ?? { status: { status: "todo" as const }, starred: false };
+    return buildVacancyTabRow(vacancy, flag.status, flag.starred);
+  });
 
   const view = resolveView(params.view);
   const reasonFilter = resolveReasonFilter(view, params.reason);

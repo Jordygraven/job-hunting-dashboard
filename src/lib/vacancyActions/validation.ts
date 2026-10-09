@@ -21,3 +21,16 @@ export function isValidIgnoreReason(value: unknown): value is IgnoreReason {
 export function isValidAppliedOnDate(value: unknown, now: Date = new Date()): value is string {
   return typeof value === "string" && isValidDateString(value) && isDateNotInFutureKl(value, now);
 }
+
+export function isValidOutcomeOnDate(
+  value: unknown,
+  appliedOn: string,
+  now: Date = new Date()
+): value is string {
+  return (
+    typeof value === "string" &&
+    isValidDateString(value) &&
+    isDateNotInFutureKl(value, now) &&
+    value >= appliedOn
+  );
+}

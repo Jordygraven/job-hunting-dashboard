@@ -59,3 +59,46 @@ export async function editAppliedDate(
   }
   return result;
 }
+
+export async function markSuccess(vacancyId: number): Promise<WriteVacancyActionResult> {
+  const result = await writeVacancyAction({ intent: "markSuccess", vacancyId });
+  if (result.ok) {
+    revalidatePath("/");
+  }
+  return result;
+}
+
+export async function markReject(vacancyId: number): Promise<WriteVacancyActionResult> {
+  const result = await writeVacancyAction({ intent: "markReject", vacancyId });
+  if (result.ok) {
+    revalidatePath("/");
+  }
+  return result;
+}
+
+export async function editOutcomeDate(
+  vacancyId: number,
+  outcomeOn: string
+): Promise<WriteVacancyActionResult> {
+  const result = await writeVacancyAction({ intent: "editOutcomeDate", vacancyId, outcomeOn });
+  if (result.ok) {
+    revalidatePath("/");
+  }
+  return result;
+}
+
+export async function star(vacancyId: number): Promise<WriteVacancyActionResult> {
+  const result = await writeVacancyAction({ intent: "star", vacancyId });
+  if (result.ok) {
+    revalidatePath("/");
+  }
+  return result;
+}
+
+export async function unstar(vacancyId: number): Promise<WriteVacancyActionResult> {
+  const result = await writeVacancyAction({ intent: "unstar", vacancyId });
+  if (result.ok) {
+    revalidatePath("/");
+  }
+  return result;
+}

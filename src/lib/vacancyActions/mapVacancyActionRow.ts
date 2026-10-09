@@ -6,6 +6,7 @@ export type VacancyActionDbRow = {
   action: VacancyActionRow["action"];
   ignore_reason: VacancyActionRow["ignoreReason"];
   applied_on: string | null;
+  outcome_on: string | null;
   created_at: string;
 };
 
@@ -16,6 +17,7 @@ export function mapVacancyActionRow(row: VacancyActionDbRow): VacancyActionRow {
     action: row.action,
     ignoreReason: row.ignore_reason,
     appliedOn: row.applied_on,
+    outcomeOn: row.outcome_on,
     createdAt: row.created_at,
   };
 }

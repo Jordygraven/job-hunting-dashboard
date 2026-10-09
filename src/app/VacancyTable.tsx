@@ -5,17 +5,23 @@ import { REASON_LABELS } from "@/lib/vacancyActions/validation";
 import { buildVacancyHref, type VacancyHrefParams } from "@/lib/vacancyActions/vacancyLinks";
 import { columnLabel, COLUMNS_BY_VIEW, nextSortState, type SortableColumnKey } from "@/lib/vacancyActions/vacancySort";
 import { VacancyActions } from "./VacancyActions";
+import { StarToggle } from "./StarToggle";
 
 const EMPTY_STATE_TEXT: Record<VacancyTabView, string> = {
   todo: "No vacancies to triage.",
+  interest: "No starred vacancies yet.",
   applied: "No applied vacancies yet.",
-  ignored: "No ignored vacancies yet.",
   all: "No vacancies yet.",
+  success: "No successful vacancies yet.",
+  rejected: "No rejected vacancies yet.",
+  ignored: "No ignored vacancies yet.",
 };
 
 const STATUS_PILL_CLASS: Record<VacancyTabRow["status"], string> = {
   todo: "bg-status-todo-bg text-status-todo-fg",
   applied: "bg-status-applied-bg text-status-applied-fg",
+  success: "bg-status-success-bg text-status-success-fg",
+  rejected: "bg-status-rejected-bg text-status-rejected-fg",
   ignored: "bg-status-ignored-bg text-status-ignored-fg",
 };
 
@@ -159,6 +165,9 @@ export function VacancyTable({
   const activeSort = sort ?? null;
   const activeDir = dir ?? null;
   const columns = COLUMNS_BY_VIEW[view];
+  const showAppliedOn = view === "applied" || view === "success" || view === "rejected";
+  const showOutcomeOn = view === "success" || view === "rejected";
+  const showStatusPill = view === "all" || view === "interest";
   const header = (column: SortableColumnKey) => (
     <SortableHeader column={column} hrefParams={hrefParams} sort={activeSort} dir={activeDir} />
   );
@@ -168,6 +177,9 @@ export function VacancyTable({
       <table className="w-full border-separate border-spacing-y-2 text-left text-sm">
         <thead>
           <tr className="border-b border-border-subtle text-xs">
+            <th scope="col" className={`py-2 pr-3 font-medium whitespace-nowrap text-text-secondary ${SHRINK_TO_CONTENT}`}>
+              Star
+            </th>
             {columns.includes("title") && header("title")}
             {columns.includes("company") && header("company")}
             {columns.includes("location") && header("location")}
@@ -178,14 +190,15 @@ export function VacancyTable({
             >
               Link
             </th>
-            {view === "applied" && columns.includes("appliedOn") && header("appliedOn")}
+            {showAppliedOn && columns.includes("appliedOn") && header("appliedOn")}
+            {showOutcomeOn && columns.includes("outcomeOn") && header("outcomeOn")}
             {view === "ignored" && (
               <>
                 {columns.includes("ignoredOn") && header("ignoredOn")}
                 {columns.includes("ignoreReason") && header("ignoreReason")}
               </>
             )}
-            {view === "all" && columns.includes("status") && header("status")}
+            {showStatusPill && columns.includes("status") && header("status")}
             <th
               scope="col"
               className={`py-2 pr-3 font-medium whitespace-nowrap text-text-secondary ${SHRINK_TO_CONTENT}`}
@@ -195,58 +208,75 @@ export function VacancyTable({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr key={row.id} className="rounded-md bg-surface-row transition-colors hover:bg-surface-row-hover">
-              <td
-                className={`rounded-l-md py-3 pr-3 pl-3 text-text-primary ${WRAP_ALLOWED_MIN_WIDTH.title}`}
+          {rows.map((row) => {
+            const starInteractive = view === "interest" || row.status === "todo";
+            return (
+              <tr
+                key={row.id}
+                className={`rounded-md transition-colors hover:bg-surface-row-hover ${
+                  row.starred ? "bg-surface-row-starred" : "bg-surface-row"
+                }`}
               >
-                {row.title}
-              </td>
-              <td
-                className={`py-3 pr-3 text-text-secondary ${WRAP_ALLOWED_MIN_WIDTH.company} ${SHRINK_TO_CONTENT}`}
-              >
-                {row.company}
-              </td>
-              <td
-                className={`py-3 pr-3 text-text-secondary ${WRAP_ALLOWED_MIN_WIDTH.location} ${SHRINK_TO_CONTENT}`}
-              >
-                {row.location ?? ""}
-              </td>
-              <td className={`py-3 pr-3 whitespace-nowrap text-text-secondary ${SHRINK_TO_CONTENT}`}>
-                {formatKlDate(row.firstSeenAt)}
-              </td>
-              <td className={`py-3 pr-3 whitespace-nowrap ${SHRINK_TO_CONTENT}`}>
-                <ViewLink href={row.url} />
-              </td>
-              {view === "applied" && (
+                <td className={`rounded-l-md py-3 pr-3 pl-3 ${SHRINK_TO_CONTENT}`}>
+                  <StarToggle vacancyId={row.id} starred={row.starred} interactive={starInteractive} />
+                </td>
+                <td className={`py-3 pr-3 text-text-primary ${WRAP_ALLOWED_MIN_WIDTH.title}`}>{row.title}</td>
+                <td
+                  className={`py-3 pr-3 text-text-secondary ${WRAP_ALLOWED_MIN_WIDTH.company} ${SHRINK_TO_CONTENT}`}
+                >
+                  {row.company}
+                </td>
+                <td
+                  className={`py-3 pr-3 text-text-secondary ${WRAP_ALLOWED_MIN_WIDTH.location} ${SHRINK_TO_CONTENT}`}
+                >
+                  {row.location ?? ""}
+                </td>
                 <td className={`py-3 pr-3 whitespace-nowrap text-text-secondary ${SHRINK_TO_CONTENT}`}>
-                  {row.appliedOn ? formatKlDate(row.appliedOn) : ""}
+                  {formatKlDate(row.firstSeenAt)}
                 </td>
-              )}
-              {view === "ignored" && (
-                <>
-                  <td className={`py-3 pr-3 whitespace-nowrap text-text-secondary ${SHRINK_TO_CONTENT}`}>
-                    {row.ignoredOn ? formatKlDate(row.ignoredOn) : ""}
-                  </td>
-                  <td className={`py-3 pr-3 whitespace-nowrap ${SHRINK_TO_CONTENT}`}>
-                    {row.ignoreReason ? (
-                      <Pill className="bg-tag-bg text-tag-fg">{REASON_LABELS[row.ignoreReason]}</Pill>
-                    ) : (
-                      "-"
-                    )}
-                  </td>
-                </>
-              )}
-              {view === "all" && (
                 <td className={`py-3 pr-3 whitespace-nowrap ${SHRINK_TO_CONTENT}`}>
-                  <Pill className={STATUS_PILL_CLASS[row.status]}>{STATUS_LABELS[row.status]}</Pill>
+                  <ViewLink href={row.url} />
                 </td>
-              )}
-              <td className={`rounded-r-md py-3 pr-3 whitespace-nowrap ${SHRINK_TO_CONTENT}`}>
-                <VacancyActions vacancyId={row.id} status={row.status} appliedOn={row.appliedOn} />
-              </td>
-            </tr>
-          ))}
+                {showAppliedOn && (
+                  <td className={`py-3 pr-3 whitespace-nowrap text-text-secondary ${SHRINK_TO_CONTENT}`}>
+                    {row.appliedOn ? formatKlDate(row.appliedOn) : ""}
+                  </td>
+                )}
+                {showOutcomeOn && (
+                  <td className={`py-3 pr-3 whitespace-nowrap text-text-secondary ${SHRINK_TO_CONTENT}`}>
+                    {row.outcomeOn ? formatKlDate(row.outcomeOn) : ""}
+                  </td>
+                )}
+                {view === "ignored" && (
+                  <>
+                    <td className={`py-3 pr-3 whitespace-nowrap text-text-secondary ${SHRINK_TO_CONTENT}`}>
+                      {row.ignoredOn ? formatKlDate(row.ignoredOn) : ""}
+                    </td>
+                    <td className={`py-3 pr-3 whitespace-nowrap ${SHRINK_TO_CONTENT}`}>
+                      {row.ignoreReason ? (
+                        <Pill className="bg-tag-bg text-tag-fg">{REASON_LABELS[row.ignoreReason]}</Pill>
+                      ) : (
+                        "-"
+                      )}
+                    </td>
+                  </>
+                )}
+                {showStatusPill && (
+                  <td className={`py-3 pr-3 whitespace-nowrap ${SHRINK_TO_CONTENT}`}>
+                    <Pill className={STATUS_PILL_CLASS[row.status]}>{STATUS_LABELS[row.status]}</Pill>
+                  </td>
+                )}
+                <td className={`rounded-r-md py-3 pr-3 whitespace-nowrap ${SHRINK_TO_CONTENT}`}>
+                  <VacancyActions
+                    vacancyId={row.id}
+                    status={row.status}
+                    appliedOn={row.appliedOn}
+                    outcomeOn={row.outcomeOn}
+                  />
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
