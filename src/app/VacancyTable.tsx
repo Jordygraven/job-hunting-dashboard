@@ -19,9 +19,21 @@ const STATUS_PILL_CLASS: Record<VacancyTabRow["status"], string> = {
   ignored: "bg-status-ignored-bg text-status-ignored-fg",
 };
 
+// Title, Company and Location are the only columns allowed to wrap — every
+// other column (dates, pills, Link, header labels) is forced to one line so
+// a narrow viewport can't cause tables to force-wrap short cells instead of
+// shrinking the flexible ones.
+const WRAP_ALLOWED_MIN_WIDTH: Partial<Record<SortableColumnKey, string>> = {
+  title: "min-w-[var(--title-col-min-width)]",
+  company: "min-w-[var(--company-col-min-width)]",
+  location: "min-w-[var(--location-col-min-width)]",
+};
+
 function Pill({ className, children }: { className: string; children: React.ReactNode }) {
   return (
-    <span className={`inline-flex rounded-sm px-2 py-0.5 text-xs font-medium tracking-wide uppercase ${className}`}>
+    <span
+      className={`inline-flex whitespace-nowrap rounded-sm px-2 py-0.5 text-xs font-medium tracking-wide uppercase ${className}`}
+    >
       {children}
     </span>
   );
@@ -49,7 +61,7 @@ function ViewLink({ href }: { href: string }) {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-1 rounded-full border border-border-accent-subtle px-3 py-1 text-accent transition-colors hover:bg-accent-muted-bg"
+      className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-border-accent-subtle px-3 py-1 text-accent transition-colors hover:bg-accent-muted-bg"
     >
       View
       <svg aria-hidden="true" viewBox="0 0 12 12" width="10" height="10" className="shrink-0">
@@ -84,9 +96,9 @@ function SortableHeader({
   return (
     <th
       scope="col"
-      className={`py-2 pr-4 font-medium ${
-        column === "company" ? "min-w-[var(--company-col-min-width)]" : ""
-      } ${isActive ? "text-text-primary" : "text-text-secondary"}`}
+      className={`py-2 pr-3 font-medium whitespace-nowrap ${WRAP_ALLOWED_MIN_WIDTH[column] ?? ""} ${
+        isActive ? "text-text-primary" : "text-text-secondary"
+      }`}
       aria-sort={ariaSort}
     >
       <Link
@@ -145,7 +157,7 @@ export function VacancyTable({
   );
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto min-[1100px]:overflow-x-visible">
       <table className="w-full border-separate border-spacing-y-2 text-left text-sm">
         <thead>
           <tr className="border-b border-border-subtle text-xs">
@@ -153,7 +165,7 @@ export function VacancyTable({
             {columns.includes("company") && header("company")}
             {columns.includes("location") && header("location")}
             {columns.includes("firstSeenAt") && header("firstSeenAt")}
-            <th scope="col" className="py-2 pr-4 font-medium text-text-secondary">
+            <th scope="col" className="py-2 pr-3 font-medium whitespace-nowrap text-text-secondary">
               Link
             </th>
             {view === "applied" && columns.includes("appliedOn") && header("appliedOn")}
@@ -164,7 +176,7 @@ export function VacancyTable({
               </>
             )}
             {view === "all" && columns.includes("status") && header("status")}
-            <th scope="col" className="py-2 pr-4 font-medium text-text-secondary">
+            <th scope="col" className="py-2 pr-3 font-medium whitespace-nowrap text-text-secondary">
               Actions
             </th>
           </tr>
@@ -172,28 +184,34 @@ export function VacancyTable({
         <tbody>
           {rows.map((row) => (
             <tr key={row.id} className="rounded-md bg-surface-row transition-colors hover:bg-surface-row-hover">
-              <td className="rounded-l-md py-3 pr-4 pl-4 text-text-primary">{row.title}</td>
-              <td className="min-w-[var(--company-col-min-width)] py-3 pr-4 text-text-secondary">
+              <td
+                className={`rounded-l-md py-3 pr-3 pl-3 text-text-primary ${WRAP_ALLOWED_MIN_WIDTH.title}`}
+              >
+                {row.title}
+              </td>
+              <td className={`py-3 pr-3 text-text-secondary ${WRAP_ALLOWED_MIN_WIDTH.company}`}>
                 {row.company}
               </td>
-              <td className="py-3 pr-4 text-text-secondary">{row.location ?? ""}</td>
-              <td className="py-3 pr-4 whitespace-nowrap text-text-secondary">
+              <td className={`py-3 pr-3 text-text-secondary ${WRAP_ALLOWED_MIN_WIDTH.location}`}>
+                {row.location ?? ""}
+              </td>
+              <td className="py-3 pr-3 whitespace-nowrap text-text-secondary">
                 {formatKlDate(row.firstSeenAt)}
               </td>
-              <td className="py-3 pr-4">
+              <td className="py-3 pr-3 whitespace-nowrap">
                 <ViewLink href={row.url} />
               </td>
               {view === "applied" && (
-                <td className="py-3 pr-4 whitespace-nowrap text-text-secondary">
+                <td className="py-3 pr-3 whitespace-nowrap text-text-secondary">
                   {row.appliedOn ? formatKlDate(row.appliedOn) : ""}
                 </td>
               )}
               {view === "ignored" && (
                 <>
-                  <td className="py-3 pr-4 whitespace-nowrap text-text-secondary">
+                  <td className="py-3 pr-3 whitespace-nowrap text-text-secondary">
                     {row.ignoredOn ? formatKlDate(row.ignoredOn) : ""}
                   </td>
-                  <td className="py-3 pr-4">
+                  <td className="py-3 pr-3 whitespace-nowrap">
                     {row.ignoreReason ? (
                       <Pill className="bg-tag-bg text-tag-fg">{REASON_LABELS[row.ignoreReason]}</Pill>
                     ) : (
@@ -203,11 +221,11 @@ export function VacancyTable({
                 </>
               )}
               {view === "all" && (
-                <td className="py-3 pr-4">
+                <td className="py-3 pr-3 whitespace-nowrap">
                   <Pill className={STATUS_PILL_CLASS[row.status]}>{STATUS_LABELS[row.status]}</Pill>
                 </td>
               )}
-              <td className="rounded-r-md py-3 pr-4">
+              <td className="rounded-r-md py-3 pr-3">
                 <VacancyActions vacancyId={row.id} status={row.status} appliedOn={row.appliedOn} />
               </td>
             </tr>

@@ -92,7 +92,7 @@ export function VacancyActions({
 
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex items-center gap-2">
+      <div className="flex max-w-[var(--actions-col-max-width)] flex-wrap items-center gap-x-2 gap-y-1">
         {isEditingDate ? (
           <>
             <input

@@ -44,7 +44,10 @@
   --radius-md: 0.625rem;
   --radius-lg: 0.875rem;
 
-  --company-col-min-width: 17rem;
+  --title-col-min-width: 18rem;
+  --company-col-min-width: 10rem;
+  --location-col-min-width: 9rem;
+  --actions-col-max-width: 300px;
 }
 
 @theme inline {
@@ -91,7 +94,7 @@
   --radius-md: var(--radius-md);
   --radius-lg: var(--radius-lg);
 
-  --container-content: 1120px;
+  --container-content: min(100% - 3rem, 1680px);
 }
 
 body {
