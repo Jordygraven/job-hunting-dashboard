@@ -9,3 +9,5 @@ Next.js (App Router, TypeScript), Supabase, Vercel. Ingests LinkedIn job-alert e
 - Build parsers only against real sample emails stored in the repo, never a guessed format.
 - Deferred ideas go in BACKLOG.md, not into the current task.
 - Claude Code reads only samples/linkedin-clean/, never the raw .eml files.
+- Design tokens (colours, radii, content width) live in `src/app/globals.css` under `:root`/`@theme inline`. No hard-coded colours in components — use the tokens.
+- Dark theme only, desktop only. No light-mode toggle, no responsive breakpoints.

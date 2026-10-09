@@ -104,3 +104,62 @@ describe("VacancyTable — row rendering", () => {
     expect(screen.getByRole("cell", { name: "To do" })).toBeInTheDocument();
   });
 });
+
+describe("VacancyTable — sortable headers", () => {
+  test("an unsorted header link sorts ascending on first click", () => {
+    render(<VacancyTable view="todo" rows={[row()]} {...NO_FILTERS} sort={null} dir={null} />);
+    expect(screen.getByRole("link", { name: "Title" })).toHaveAttribute(
+      "href",
+      "/?view=todo&sort=title&dir=asc"
+    );
+  });
+
+  test("clicking the active ascending header sorts it descending next", () => {
+    render(<VacancyTable view="todo" rows={[row()]} {...NO_FILTERS} sort="title" dir="asc" />);
+    expect(screen.getByRole("link", { name: /Title/ })).toHaveAttribute(
+      "href",
+      "/?view=todo&sort=title&dir=desc"
+    );
+  });
+
+  test("clicking the active descending header clears the sort next", () => {
+    render(<VacancyTable view="todo" rows={[row()]} {...NO_FILTERS} sort="title" dir="desc" />);
+    expect(screen.getByRole("link", { name: /Title/ })).toHaveAttribute("href", "/?view=todo");
+  });
+
+  test("clicking a different header while one is active resets that column to asc, and carries current filters", () => {
+    render(
+      <VacancyTable
+        view="todo"
+        rows={[row()]}
+        {...NO_FILTERS}
+        sort="title"
+        dir="desc"
+        q="engineer"
+        company="Acme"
+      />
+    );
+    expect(screen.getByRole("link", { name: "Company" })).toHaveAttribute(
+      "href",
+      "/?view=todo&q=engineer&company=Acme&sort=company&dir=asc"
+    );
+  });
+
+  test("aria-sort reflects the active column and direction; other sortable columns are none", () => {
+    render(<VacancyTable view="todo" rows={[row()]} {...NO_FILTERS} sort="company" dir="desc" />);
+    expect(screen.getByRole("columnheader", { name: /Title/ })).toHaveAttribute("aria-sort", "none");
+    expect(screen.getByRole("columnheader", { name: /Company/ })).toHaveAttribute(
+      "aria-sort",
+      "descending"
+    );
+  });
+
+  test("Link and Actions headers are plain text, not links, and carry no aria-sort", () => {
+    render(<VacancyTable view="todo" rows={[row()]} {...NO_FILTERS} sort="title" dir="asc" />);
+    const linkHeader = screen.getByRole("columnheader", { name: "Link" });
+    const actionsHeader = screen.getByRole("columnheader", { name: "Actions" });
+    expect(linkHeader).not.toHaveAttribute("aria-sort");
+    expect(actionsHeader).not.toHaveAttribute("aria-sort");
+    expect(screen.queryByRole("link", { name: "Actions" })).not.toBeInTheDocument();
+  });
+});

@@ -1,5 +1,6 @@
 import type { IgnoreReason } from "./types";
 import { statusFilterAppliesToView, type ShowParam, type VacancyStatusFilter, type VacancyTabView } from "./vacancyTabs";
+import { COLUMNS_BY_VIEW, type SortDir, type SortableColumnKey } from "./vacancySort";
 
 export type VacancyHrefParams = {
   view: VacancyTabView;
@@ -10,6 +11,8 @@ export type VacancyHrefParams = {
   company?: string | null;
   from?: string | null;
   to?: string | null;
+  sort?: SortableColumnKey | null;
+  dir?: SortDir | null;
 };
 
 export function buildVacancyHref(params: VacancyHrefParams): string {
@@ -35,6 +38,14 @@ export function buildVacancyHref(params: VacancyHrefParams): string {
   }
   if (params.to) {
     searchParams.set("to", params.to);
+  }
+  if (
+    params.sort &&
+    params.dir &&
+    (COLUMNS_BY_VIEW[params.view] as readonly string[]).includes(params.sort)
+  ) {
+    searchParams.set("sort", params.sort);
+    searchParams.set("dir", params.dir);
   }
 
   return `/?${searchParams.toString()}`;

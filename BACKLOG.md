@@ -21,6 +21,11 @@
 - Final review: `src/app/actions.test.ts`'s test named "returns a safe error message and still revalidates when runSync throws" actually asserts raw `error.message` passthrough for the pre-existing `runManualSync` (frozen, unchanged behavior) — the name is misleading since it reads as a verified safety guarantee the test doesn't provide. Consider renaming and/or scrubbing the underlying raw-message passthrough later.
 - Final review: `vacancy_actions`'s schema has no non-executable reference committed in the repo, unlike this project's convention of keeping SQL in a file — several of this feature's correctness arguments rest on DB CHECK constraints that aren't verifiable from the codebase alone. Consider adding a reference doc (e.g. `docs/schema/vacancy_actions.sql`, non-executable, for documentation only).
 
+## Epic 8 (look and feel + sorting) — 9 Oct
+
+- The "Ignore with reason" select's chevron icon is a hardcoded hex (`#a1a1ab`) in an inline SVG data URI rather than a token reference — `background-image` can't use `currentColor`/CSS vars directly, so if `--text-secondary` changes later, the chevron won't follow it. — `src/app/VacancyActions.tsx`.
+- Table rows use `border-collapse: separate` + `border-spacing-y` with per-cell `rounded-l-md`/`rounded-r-md` for the card look — this is a known CSS quirk area (row hover background can show seams at cell boundaries in some browsers). Worth a visual check on the Preview deploy; not verifiable from code alone. — `src/app/VacancyTable.tsx`.
+
 ## Step 2 (triage UI) — 7 Oct
 
 - Final review: `deriveVacancyStatus`'s new throw-on-invariant-violation (a latest "applied" row with null `appliedOn`) now sits behind a real caller (page load) for the first time, and a trip there 500s the whole `/` route (sync panel + all four tabs), same as any other DB-read error already did before this branch. Non-blocking — the DB CHECK constraint makes it practically unreachable — but if per-row degradation is ever wanted instead of page-wide failure, this is where to start.

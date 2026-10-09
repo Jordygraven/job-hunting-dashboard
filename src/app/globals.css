@@ -1,8 +1,43 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: dark;
+
+  --background: #0b0b0f;
+  --foreground: #f4f4f6;
+
+  --surface-page: #0b0b0f;
+  --surface-panel: #131318;
+  --surface-row: #18181f;
+  --surface-row-hover: #1f1f28;
+  --border-subtle: #27272f;
+
+  --text-primary: #f4f4f6;
+  --text-secondary: #a1a1ab;
+  --text-muted: #86868f;
+
+  --accent: #818cf8;
+  --accent-hover: #93a1fa;
+  --accent-foreground: #0b0b0f;
+  --accent-muted-bg: rgba(129, 140, 248, 0.14);
+
+  --status-todo-bg: rgba(161, 161, 171, 0.14);
+  --status-todo-fg: #c4c4cc;
+  --status-applied-bg: rgba(129, 140, 248, 0.16);
+  --status-applied-fg: #b4bcfb;
+  --status-ignored-bg: rgba(161, 161, 171, 0.1);
+  --status-ignored-fg: #9191a0;
+
+  --tag-bg: rgba(161, 161, 171, 0.14);
+  --tag-fg: #c4c4cc;
+
+  --danger-bg: #2a1215;
+  --danger-border: #7f1d1d;
+  --danger-fg: #fca5a5;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.875rem;
 }
 
 @theme inline {
@@ -10,13 +45,41 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-surface-page: var(--surface-page);
+  --color-surface-panel: var(--surface-panel);
+  --color-surface-row: var(--surface-row);
+  --color-surface-row-hover: var(--surface-row-hover);
+  --color-border-subtle: var(--border-subtle);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-muted-bg: var(--accent-muted-bg);
+
+  --color-status-todo-bg: var(--status-todo-bg);
+  --color-status-todo-fg: var(--status-todo-fg);
+  --color-status-applied-bg: var(--status-applied-bg);
+  --color-status-applied-fg: var(--status-applied-fg);
+  --color-status-ignored-bg: var(--status-ignored-bg);
+  --color-status-ignored-fg: var(--status-ignored-fg);
+
+  --color-tag-bg: var(--tag-bg);
+  --color-tag-fg: var(--tag-fg);
+
+  --color-danger-bg: var(--danger-bg);
+  --color-danger-border: var(--danger-border);
+  --color-danger-fg: var(--danger-fg);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+
+  --container-content: 1120px;
 }
 
 body {

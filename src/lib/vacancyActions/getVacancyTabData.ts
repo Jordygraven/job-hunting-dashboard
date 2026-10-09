@@ -18,6 +18,7 @@ import {
   type VacancyTabRow,
   type VacancyTabView,
 } from "./vacancyTabs";
+import { resolveSort, sortRows, type SortDir, type SortableColumnKey } from "./vacancySort";
 import type { IgnoreReason } from "./types";
 
 export type VacancyTabSearchParams = {
@@ -29,6 +30,8 @@ export type VacancyTabSearchParams = {
   from?: string | string[];
   to?: string | string[];
   status?: string | string[];
+  sort?: string | string[];
+  dir?: string | string[];
 };
 
 export type VacancyTabData = {
@@ -45,6 +48,8 @@ export type VacancyTabData = {
   to: string | null;
   companies: string[];
   hasActiveFilters: boolean;
+  sort: SortableColumnKey | null;
+  dir: SortDir | null;
 };
 
 export async function getVacancyTabData(params: VacancyTabSearchParams): Promise<VacancyTabData> {
@@ -59,6 +64,7 @@ export async function getVacancyTabData(params: VacancyTabSearchParams): Promise
   const statusFilter = resolveStatusFilter(view, params.status);
   const show = resolveShow(params.show);
   const filters = resolveVacancyFilters(params);
+  const { sort, dir } = resolveSort(view, params.sort, params.dir);
 
   const commonFilteredRows = allRows.filter((row) => matchesVacancyFilters(row, filters));
   const counts = countByView(commonFilteredRows);
@@ -67,6 +73,7 @@ export async function getVacancyTabData(params: VacancyTabSearchParams): Promise
   if (statusFilter) {
     filteredRows = filteredRows.filter((row) => row.status === statusFilter);
   }
+  filteredRows = sortRows(filteredRows, sort, dir);
 
   return {
     view,
@@ -82,5 +89,7 @@ export async function getVacancyTabData(params: VacancyTabSearchParams): Promise
     rows: sliceRowsForShow(filteredRows, show),
     filteredCount: filteredRows.length,
     hasActiveFilters: Boolean(filters.q || filters.company || filters.from || filters.to || statusFilter),
+    sort,
+    dir,
   };
 }

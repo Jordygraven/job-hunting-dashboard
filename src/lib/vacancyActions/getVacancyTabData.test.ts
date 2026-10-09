@@ -210,4 +210,64 @@ describe("getVacancyTabData", () => {
     expect((await getVacancyTabData({ from: "2026-10-01" })).hasActiveFilters).toBe(true);
     expect((await getVacancyTabData({ view: "all", status: "todo" })).hasActiveFilters).toBe(true);
   });
+
+  test("with no sort param, row order matches today's default (DB order) exactly", async () => {
+    getVacanciesMock.mockResolvedValue(VACANCIES);
+    getVacancyStatusesMock.mockResolvedValue(new Map());
+
+    const result = await getVacancyTabData({ view: "all" });
+
+    expect(result.sort).toBeNull();
+    expect(result.dir).toBeNull();
+    expect(result.rows.map((r) => r.id)).toEqual([1, 2, 3]);
+  });
+
+  test("an invalid sort or dir param is ignored, falling back to default order", async () => {
+    getVacanciesMock.mockResolvedValue(VACANCIES);
+    getVacancyStatusesMock.mockResolvedValue(new Map());
+
+    const badColumn = await getVacancyTabData({ view: "all", sort: "nope", dir: "asc" });
+    expect(badColumn.sort).toBeNull();
+    expect(badColumn.rows.map((r) => r.id)).toEqual([1, 2, 3]);
+
+    const badDir = await getVacancyTabData({ view: "all", sort: "title", dir: "sideways" });
+    expect(badDir.dir).toBeNull();
+    expect(badDir.rows.map((r) => r.id)).toEqual([1, 2, 3]);
+
+    const columnNotOnTab = await getVacancyTabData({ view: "todo", sort: "status", dir: "asc" });
+    expect(columnNotOnTab.sort).toBeNull();
+  });
+
+  test("a valid sort changes row order but not counts or filteredCount", async () => {
+    getVacanciesMock.mockResolvedValue(VACANCIES);
+    getVacancyStatusesMock.mockResolvedValue(new Map());
+
+    const result = await getVacancyTabData({ view: "all", sort: "title", dir: "desc" });
+
+    expect(result.sort).toBe("title");
+    expect(result.dir).toBe("desc");
+    expect(result.rows.map((r) => r.id)).toEqual([3, 2, 1]);
+    expect(result.counts).toEqual({ todo: 3, applied: 0, ignored: 0, all: 3 });
+    expect(result.filteredCount).toBe(3);
+  });
+
+  test("sort is applied to the full filtered set before the show slice", async () => {
+    const manyVacancies = Array.from({ length: 12 }, (_, i) => ({
+      id: i + 1,
+      title: `Job ${String(i + 1).padStart(2, "0")}`,
+      company: "Co",
+      location: null,
+      url: `https://x/${i + 1}`,
+      firstSeenAt: "2026-10-01T00:00:00.000Z",
+    }));
+    getVacanciesMock.mockResolvedValue(manyVacancies);
+    getVacancyStatusesMock.mockResolvedValue(new Map());
+
+    const result = await getVacancyTabData({ view: "all", sort: "title", dir: "asc" });
+
+    expect(result.show).toBe(10);
+    expect(result.rows).toHaveLength(10);
+    expect(result.rows[0].title).toBe("Job 01");
+    expect(result.filteredCount).toBe(12);
+  });
 });

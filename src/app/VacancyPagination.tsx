@@ -12,6 +12,8 @@ export function VacancyPagination({
   company,
   from,
   to,
+  sort,
+  dir,
 }: VacancyHrefParams & { filteredCount: number; show: ShowParam }) {
   const summary = describeShownRows(filteredCount, show);
   if (!summary) {
@@ -19,8 +21,8 @@ export function VacancyPagination({
   }
 
   return (
-    <div className="mt-3 w-full text-left text-sm text-zinc-600 dark:text-zinc-400">
-      <p className="w-full text-left">
+    <div className="mt-6 flex flex-col items-center gap-2 text-sm text-text-secondary">
+      <p>
         Showing {summary.shown} of {summary.total}
       </p>
       {summary.more && (
@@ -34,8 +36,10 @@ export function VacancyPagination({
             company,
             from,
             to,
+            sort,
+            dir,
           })}
-          className="block w-fit text-left underline"
+          className="rounded-full border border-border-subtle px-4 py-1.5 text-text-secondary transition-colors hover:border-accent hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           {summary.more.label}
         </Link>
