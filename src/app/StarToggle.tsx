@@ -1,9 +1,25 @@
 // src/app/StarToggle.tsx
 "use client";
 
-import { useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import { star, unstar } from "./actions";
 import { SAFE_ERROR_MESSAGE } from "@/lib/vacancyActions/errors";
+
+// Starring/unstarring is the only action that reorders the table (starred
+// rows sort first by default), which can relocate the clicked row far from
+// the current scroll position. These hold the pre-click scrollY across the
+// server round trip so it can be restored once the reordered row lands.
+let pendingScrollRestore: number | null = null;
+
+export function scheduleScrollRestore(scrollY: number): void {
+  pendingScrollRestore = scrollY;
+}
+
+export function consumePendingScrollRestore(): number | null {
+  const y = pendingScrollRestore;
+  pendingScrollRestore = null;
+  return y;
+}
 
 const STAR_BUTTON_CLASS =
   "inline-flex h-6 w-6 items-center justify-center rounded-full text-text-secondary transition-colors hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-40";
@@ -43,14 +59,28 @@ export function StarToggle({
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Runs after every commit (not just this row's): the row that gets
+  // reordered by a star/unstar may not be the one whose instance survives
+  // (e.g. unstarring on the Interest tab removes the row entirely), so any
+  // still-mounted StarToggle can pick up the pending restore.
+  useLayoutEffect(() => {
+    const y = consumePendingScrollRestore();
+    if (y !== null) {
+      window.scrollTo(0, y);
+    }
+  });
+
   async function toggle() {
+    const scrollY = window.scrollY;
     setIsPending(true);
     setError(null);
     try {
       const result = await (starred ? unstar(vacancyId) : star(vacancyId));
       if (!result.ok) {
         setError(result.error);
+        return;
       }
+      scheduleScrollRestore(scrollY);
     } catch {
       setError(SAFE_ERROR_MESSAGE);
     } finally {

@@ -11,15 +11,18 @@ vi.mock("./actions", () => ({
   unstar: (...args: any[]) => unstarMock(...args),
 }));
 
-import { StarToggle } from "./StarToggle";
+import { consumePendingScrollRestore, scheduleScrollRestore, StarToggle } from "./StarToggle";
 
 beforeEach(() => {
   starMock = vi.fn();
   unstarMock = vi.fn();
+  // jsdom doesn't implement scrollTo; every toggle's layout effect calls it.
+  vi.spyOn(window, "scrollTo").mockImplementation(() => {});
 });
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
 });
 
 describe("StarToggle — interactive (To do rows, or any row on the Interest tab)", () => {
@@ -69,5 +72,51 @@ describe("StarToggle — non-interactive (every other row on every other tab)", 
   test("unstarred renders nothing", () => {
     const { container } = render(<StarToggle vacancyId={1} starred={false} interactive={false} />);
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+// Starring/unstarring reorders the table (starred rows sort first by
+// default), which otherwise relocates the clicked row away from the page's
+// current scroll position. See StarToggle.tsx for the full explanation.
+describe("scheduleScrollRestore / consumePendingScrollRestore — the scroll-restore queue", () => {
+  afterEach(() => {
+    consumePendingScrollRestore(); // drain in case a test below left it set
+  });
+
+  test("consuming returns the scheduled value", () => {
+    scheduleScrollRestore(240);
+    expect(consumePendingScrollRestore()).toBe(240);
+  });
+
+  test("consuming clears it — a second consume returns null", () => {
+    scheduleScrollRestore(100);
+    consumePendingScrollRestore();
+    expect(consumePendingScrollRestore()).toBeNull();
+  });
+
+  test("consuming with nothing scheduled returns null", () => {
+    expect(consumePendingScrollRestore()).toBeNull();
+  });
+});
+
+describe("StarToggle — scroll position", () => {
+  test("restores the pre-click scroll position after a successful toggle", async () => {
+    starMock.mockResolvedValue({ ok: true });
+    Object.defineProperty(window, "scrollY", { value: 850, configurable: true });
+
+    render(<StarToggle vacancyId={7} starred={false} interactive={true} />);
+    fireEvent.click(screen.getByRole("button", { name: "Star" }));
+
+    await waitFor(() => expect(window.scrollTo).toHaveBeenCalledWith(0, 850));
+  });
+
+  test("does not touch scroll position when the server rejects the toggle", async () => {
+    starMock.mockResolvedValue({ ok: false, error: "Can only star a To do vacancy." });
+
+    render(<StarToggle vacancyId={7} starred={false} interactive={true} />);
+    fireEvent.click(screen.getByRole("button", { name: "Star" }));
+
+    await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
+    expect(window.scrollTo).not.toHaveBeenCalled();
   });
 });
