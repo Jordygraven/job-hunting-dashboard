@@ -36,6 +36,7 @@ async function fetchEntryLines(
 ): Promise<VacancyLine[] | null> {
   const name = displayNameFor(entry);
   if (entry.source === "greenhouse" && !name) return null;
+  if (entry.inserted === 0) return [];
 
   let query = client
     .from("vacancies")

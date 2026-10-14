@@ -53,6 +53,35 @@ describe("getSyncVacancies", () => {
     expect(calls[1].eq).toContainEqual(["company", "Bybit"]);
     expect(groups[2]).toMatchObject({ label: "gone", inserted: 7, lines: null, more: 7 });
   });
+  test("inserted 0: no query, empty list", async () => {
+    const { client, calls } = fakeClient();
+    const r = run({ sourceResults: [entry({ source: "greenhouse", board: "bybit", inserted: 0 })] });
+    const groups = (await getSyncVacancies([r], client)).get(1) as any[];
+    expect(calls).toHaveLength(0);
+    expect(groups[0]).toMatchObject({ label: "Bybit", inserted: 0, lines: [], more: 0 });
+  });
+  test("inserted above 0 queries once with the same filters", async () => {
+    const { client, calls } = fakeClient();
+    await getSyncVacancies([run({ sourceResults: [entry({ inserted: 1 })] })], client);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toMatchObject({
+      cols: "title, company, url",
+      eq: [["sync_run_id", "r1"], ["source", "linkedin"]],
+      order: ["id", { ascending: true }],
+      limit: 100,
+    });
+  });
+  test("LinkedIn 8 + Greenhouse board 0: exactly 1 query", async () => {
+    const { client, calls } = fakeClient();
+    const r = run({
+      sourceResults: [
+        entry({ source: "linkedin", inserted: 8 }),
+        entry({ source: "greenhouse", board: "bybit", inserted: 0 }),
+      ],
+    });
+    await getSyncVacancies([r], client);
+    expect(calls).toHaveLength(1);
+  });
   test("null runId or null source_results: no query", async () => {
     const { client, calls } = fakeClient();
     const result = await getSyncVacancies(
