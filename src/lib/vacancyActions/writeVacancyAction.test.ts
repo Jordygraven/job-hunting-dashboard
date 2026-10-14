@@ -292,6 +292,13 @@ describe("writeVacancyAction success paths", () => {
     expect(insertMock).toHaveBeenCalledWith({ vacancy_id: 1, action: "ignored", ignore_reason: "seniority" });
   });
 
+  test("ignore with reason duplicate inserts it", async () => {
+    mockTables({ actionRows: { data: [], error: null } });
+    const result = await writeVacancyAction({ intent: "ignore", vacancyId: 1, reason: "duplicate" });
+    expect(result).toEqual({ ok: true });
+    expect(insertMock).toHaveBeenCalledWith({ vacancy_id: 1, action: "ignored", ignore_reason: "duplicate" });
+  });
+
   test("undo from applied inserts a reset row with no applied_on or ignore_reason", async () => {
     mockTables({ actionRows: { data: [actionRow({ action: "applied", applied_on: "2026-10-01" })], error: null } });
     const result = await writeVacancyAction({ intent: "undo", vacancyId: 1 });
