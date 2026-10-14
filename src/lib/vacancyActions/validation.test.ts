@@ -28,6 +28,7 @@ describe("isValidIgnoreReason", () => {
     expect(isValidIgnoreReason("language")).toBe(true);
     expect(isValidIgnoreReason("interest")).toBe(true);
     expect(isValidIgnoreReason("seniority")).toBe(true);
+    expect(isValidIgnoreReason("duplicate")).toBe(true);
     expect(isValidIgnoreReason("other")).toBe(true);
   });
 
@@ -89,6 +90,6 @@ describe("isValidOutcomeOnDate", () => {
 
 describe("IGNORE_REASONS", () => {
   test("exports exactly the four allowed reasons", () => {
-    expect(IGNORE_REASONS).toEqual(["language", "interest", "seniority", "other"]);
+    expect(IGNORE_REASONS).toEqual(["language", "interest", "seniority", "duplicate", "other"]);
   });
 });

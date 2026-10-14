@@ -1,4 +1,4 @@
-export type IgnoreReason = "language" | "interest" | "seniority" | "other";
+export type IgnoreReason = "language" | "interest" | "seniority" | "duplicate" | "other";
 
 export const STATUS_ACTIONS = ["applied", "ignored", "reset", "rejected", "success"] as const;
 export const STAR_ACTIONS = ["starred", "unstarred"] as const;

@@ -80,6 +80,7 @@ describe("resolveReasonFilter", () => {
     expect(resolveReasonFilter("ignored", "language")).toBe("language");
     expect(resolveReasonFilter("ignored", "interest")).toBe("interest");
     expect(resolveReasonFilter("ignored", "seniority")).toBe("seniority");
+    expect(resolveReasonFilter("ignored", "duplicate")).toBe("duplicate");
     expect(resolveReasonFilter("ignored", "other")).toBe("other");
     expect(resolveReasonFilter("ignored", "none")).toBe("none");
   });
