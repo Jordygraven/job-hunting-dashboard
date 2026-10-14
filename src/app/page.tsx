@@ -50,11 +50,11 @@ export default async function Home({
   return (
     <div className="flex flex-col flex-1 bg-surface-page font-sans">
       <main className="flex flex-1 w-full max-w-content mx-auto flex-col py-12 px-6 gap-8">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
           <h1 className="text-2xl font-semibold text-text-primary">Vacancies</h1>
           <Link
             href="/syncs"
-            className="rounded-full border border-border-accent-subtle px-4 py-1.5 text-sm font-medium text-accent transition-colors hover:bg-surface-panel focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="whitespace-nowrap rounded-full border border-border-control bg-surface-control px-3 py-1 text-sm text-text-primary transition-colors hover:border-border-control-hover hover:bg-surface-control-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             View syncs
           </Link>
