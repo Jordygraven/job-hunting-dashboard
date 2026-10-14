@@ -4,36 +4,18 @@ import {
   type VacancyTabSearchParams,
 } from "@/lib/vacancyActions/getVacancyTabData";
 import { getRecentSyncRuns } from "@/lib/sync/getRecentSyncRuns";
-import { getSyncAlert, STALE_THRESHOLD_HOURS, type AlertReason } from "@/lib/sync/getSyncAlert";
+import { getSyncAlert } from "@/lib/sync/getSyncAlert";
+import Link from "next/link";
+import { pluralize } from "@/lib/format/pluralize";
 import { formatKlDateTime } from "@/lib/format/kualaLumpurTime";
 import { buildVacancyHref } from "@/lib/vacancyActions/vacancyLinks";
 import { SyncButton } from "./SyncButton";
-import { SyncDetails, pluralize } from "./SyncDetails";
 import { VacancyFilterBar } from "./VacancyFilterBar";
 import { VacancyTabs } from "./VacancyTabs";
 import { VacancyTable } from "./VacancyTable";
 import { VacancyPagination } from "./VacancyPagination";
 
 export const dynamic = "force-dynamic";
-
-function alertText(reason: AlertReason): string {
-  switch (reason.type) {
-    case "no-run":
-      return "No sync has ever run.";
-    case "stale":
-      return `Last sync finished at ${formatKlDateTime(reason.finishedAt)}, more than ${STALE_THRESHOLD_HOURS} hours ago.`;
-    case "error":
-      return `Last sync failed: ${reason.error}`;
-    case "failures":
-      return `${reason.failures.length} message(s) failed: ${reason.failures
-        .map((f) => `${f.messageId} (${f.reason})`)
-        .join(", ")}`;
-    case "parser-failures":
-      return `${reason.count} card(s) failed to parse: ${reason.parserFailures
-        .map((f) => `${f.messageId} (${f.reason})`)
-        .join(", ")}`;
-  }
-}
 
 export default async function Home({
   searchParams,
@@ -68,7 +50,15 @@ export default async function Home({
   return (
     <div className="flex flex-col flex-1 bg-surface-page font-sans">
       <main className="flex flex-1 w-full max-w-content mx-auto flex-col py-12 px-6 gap-8">
-        <h1 className="text-2xl font-semibold text-text-primary">Vacancies</h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-semibold text-text-primary">Vacancies</h1>
+          <Link
+            href="/syncs"
+            className="whitespace-nowrap rounded-full border border-border-control bg-surface-control px-3 py-1 text-sm text-text-primary transition-colors hover:border-border-control-hover hover:bg-surface-control-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            View syncs
+          </Link>
+        </div>
 
         <section>
           <h2 className="text-lg font-semibold mb-3 text-text-primary">Sync status</h2>
@@ -78,19 +68,18 @@ export default async function Home({
           </div>
 
           {alerts.length > 0 && (
-            <div className="mb-3 rounded-lg border border-danger-border bg-danger-bg p-3 text-sm text-danger-fg">
-              <ul className="list-disc pl-4">
-                {alerts.map((reason) => (
-                  <li key={reason.type}>{alertText(reason)}</li>
-                ))}
-              </ul>
-            </div>
+            <Link
+              href="/syncs"
+              className="mb-3 block rounded-lg border border-danger-border bg-danger-bg p-3 text-sm text-danger-fg"
+            >
+              Sync needs attention ({alerts.length}). See Syncs.
+            </Link>
           )}
 
           {latestRun && latestRun.status === "error" && (
             <p className="text-sm text-text-secondary">
               Finished {formatKlDateTime(latestRun.finishedAt)} ({latestRun.trigger}) · sync
-              failed, see above.
+              failed, <Link href="/syncs" className="text-accent">see Syncs</Link>.
             </p>
           )}
 
@@ -102,8 +91,6 @@ export default async function Home({
               {pluralize(latestRun.warnings ?? 0, "warning")}.
             </p>
           )}
-
-          <SyncDetails recentRuns={recentRuns} defaultOpen={alerts.length > 0} />
         </section>
 
         <section>

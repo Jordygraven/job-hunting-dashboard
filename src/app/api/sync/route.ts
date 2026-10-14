@@ -1,4 +1,5 @@
-import { runSync, SyncDatabaseError } from "@/lib/sync/runSync";
+import { runSync } from "@/lib/sync/runSync";
+import { SyncDatabaseError } from "@/lib/sync/upsertChunks";
 import { constantTimeEqual } from "@/lib/auth/basicAuth";
 
 function isAuthorizedCronRequest(authHeader: string | null, expectedSecret: string | undefined): boolean {
@@ -26,6 +27,7 @@ export async function GET(request: Request) {
     if (error instanceof SyncDatabaseError) {
       return Response.json({ error: "database error" }, { status: 500 });
     }
-    throw error;
+    console.error(error);
+    return Response.json({ error: "sync failed" }, { status: 500 });
   }
 }

@@ -31,7 +31,8 @@ vi.mock("@/config/greenhouseBoards", () => ({
   ],
 }));
 
-import { runSync, SyncDatabaseError } from "./runSync";
+import { runSync } from "./runSync";
+import { SyncDatabaseError } from "./upsertChunks";
 
 function upsertTable(result: { data: unknown; error: unknown }) {
   return { upsert: () => ({ select: () => Promise.resolve(result) }) };
@@ -81,7 +82,7 @@ describe("runSync success", () => {
       parserFailureCount: 0,
       parserFailures: [],
       failures: [],
-      warningDetails: [{ messageId: "m1", jobId: "1", reason: "unrecognized extra line inside card" }],
+      warningDetails: [{ messageId: "m1", jobId: "1", reason: "unrecognized extra line inside card", source: "linkedin" }],
     });
 
     expect(insertMock).toHaveBeenCalledTimes(1);
@@ -98,11 +99,30 @@ describe("runSync success", () => {
       parser_failure_count: 0,
       parser_failures: [],
       failures: [],
-      warning_details: [{ messageId: "m1", jobId: "1", reason: "unrecognized extra line inside card" }],
+      warning_details: [{ messageId: "m1", jobId: "1", reason: "unrecognized extra line inside card", source: "linkedin" }],
       error: null,
     });
     expect(row.started_at).toBeTypeOf("string");
     expect(row.finished_at).toBeTypeOf("string");
+  });
+
+  test("parser failures and warning details are stored with source linkedin", async () => {
+    fromMock.mockImplementation((table: string) =>
+      table === "vacancies" ? upsertTable({ data: [], error: null }) : syncRunsTable()
+    );
+    fetchLinkedInAlertsMock.mockResolvedValue([{ id: "m1", threadId: "t1", date: "", subject: "" }]);
+    fetchMessageContentMock.mockResolvedValue({ id: "m1", internalDate: "1000", text: "body" });
+    parseLinkedInAlertMock.mockReturnValue({
+      cards: [],
+      warnings: [{ reason: "w", snippet: "s", jobId: "1" }],
+      failures: [{ reason: "f", snippet: "s", jobId: "2" }],
+    });
+
+    await runSync("cron");
+
+    const row = insertMock.mock.calls[0][0];
+    expect(row.parser_failures).toEqual([{ messageId: "m1", jobId: "2", reason: "f", source: "linkedin" }]);
+    expect(row.warning_details).toEqual([{ messageId: "m1", jobId: "1", reason: "w", source: "linkedin" }]);
   });
 
   test("some individual messages fail, overall run still succeeds", async () => {
@@ -128,7 +148,7 @@ describe("runSync success", () => {
     const result = await runSync("cron");
 
     expect(result.inserted).toBe(1);
-    expect(result.failures).toEqual([{ messageId: "m2", jobId: null, reason: "fetch timeout" }]);
+    expect(result.failures).toEqual([{ messageId: "m2", jobId: null, reason: "fetch timeout", source: "linkedin" }]);
 
     expect(insertMock).toHaveBeenCalledTimes(1);
     expect(insertMock.mock.calls[0][0]).toMatchObject({
@@ -140,7 +160,7 @@ describe("runSync success", () => {
 });
 
 describe("runSync crash before any message is fetched", () => {
-  test("writes exactly one error sync_runs row with null counts and rethrows", async () => {
+  test("writes exactly one error sync_runs row with real zero counts and rethrows", async () => {
     fromMock.mockImplementation(() => syncRunsTable());
     fetchLinkedInAlertsMock.mockRejectedValue(new Error("gmail unreachable"));
 
@@ -151,15 +171,16 @@ describe("runSync crash before any message is fetched", () => {
     expect(row).toMatchObject({
       trigger: "cron",
       status: "error",
-      messages: null,
-      cards: null,
-      unique_jobs: null,
-      inserted: null,
-      skipped: null,
-      warnings: null,
-      parser_failure_count: null,
+      messages: 0,
+      cards: 0,
+      unique_jobs: 0,
+      inserted: 0,
+      skipped: 0,
+      warnings: 0,
+      parser_failure_count: 0,
       parser_failures: [],
-      failures: [{ messageId: "gmail", jobId: null, reason: "gmail unreachable" }],
+      failures: [{ messageId: "gmail", jobId: null, reason: "gmail unreachable", source: "linkedin" }],
+      source_results: [{ source: "linkedin", found: 0, inserted: 0, skipped: 0, failed: 1 }],
       error: "gmail unreachable",
     });
   });
@@ -186,7 +207,7 @@ describe("runSync database upsert failure", () => {
     expect(insertMock.mock.calls[0][0]).toMatchObject({
       trigger: "manual",
       status: "error",
-      messages: null,
+      messages: 1,
       error: "duplicate key",
     });
   });
@@ -221,7 +242,7 @@ describe("runSync crash after partial message failures", () => {
     const row = insertMock.mock.calls[0][0];
     expect(row).toMatchObject({
       status: "error",
-      messages: null,
+      messages: 3,
       error: "duplicate key",
       parser_failures: [],
       failures: [
@@ -287,7 +308,7 @@ describe("runSync Greenhouse step", () => {
 
     const result = await runSync("cron");
 
-    expect(result.failures).toEqual([{ messageId: "greenhouse:alpha", jobId: null, reason: "HTTP 503" }]);
+    expect(result.failures).toEqual([{ messageId: "alpha", jobId: null, reason: "HTTP 503", source: "greenhouse", board: "alpha" }]);
     expect(result).toMatchObject({ messages: 0, cards: 0, unique: 1, inserted: 1, skipped: 0 });
     expect(upsertMock).toHaveBeenCalledTimes(1);
     expect(upsertMock.mock.calls[0][0]).toEqual([
@@ -315,7 +336,7 @@ describe("runSync Greenhouse step", () => {
     const result = await runSync("cron");
 
     expect(result.failures).toEqual([
-      { messageId: "greenhouse:alpha", jobId: "3", reason: "job missing absolute_url" },
+      { messageId: "alpha", jobId: "3", reason: "job missing absolute_url", source: "greenhouse", board: "alpha" },
     ]);
     expect(upsertMock.mock.calls[0][0]).toHaveLength(1);
     expect(upsertMock).toHaveBeenCalledTimes(1);
@@ -370,7 +391,147 @@ describe("runSync Greenhouse step", () => {
       status: "error",
       error: "duplicate key",
       messages: 0,
-      unique_jobs: 0,
+      unique_jobs: 1,
+    });
+  });
+
+  test("Gmail and Greenhouse both crash: both reasons joined, counts kept, first problem rethrown", async () => {
+    vi.stubEnv("GREENHOUSE_SYNC_ENABLED", "true");
+    setup();
+    fetchLinkedInAlertsMock.mockRejectedValue(new Error("gmail unreachable"));
+    fetchBoardJobsMock.mockResolvedValue([job(1)]);
+    upsertMock.mockReturnValue({ select: () => Promise.resolve({ data: null, error: { message: "gh db down" } }) });
+
+    await expect(runSync("cron")).rejects.toBeInstanceOf(SyncDatabaseError);
+
+    expect(insertMock.mock.calls[0][0]).toMatchObject({
+      status: "error",
+      error: "gmail unreachable\ngh db down",
+      messages: 0,
+    });
+  });
+
+  test("Gmail database error then Greenhouse database error: both recorded, first thrown", async () => {
+    vi.stubEnv("GREENHOUSE_SYNC_ENABLED", "true");
+    setup({ data: null, error: { message: "db boom" } });
+    fetchLinkedInAlertsMock.mockResolvedValue([{ id: "m1", threadId: "t1", date: "", subject: "" }]);
+    fetchMessageContentMock.mockResolvedValue({ id: "m1", internalDate: "1000", text: "body" });
+    parseLinkedInAlertMock.mockReturnValue({
+      cards: [{ jobId: "1", title: "Widget Engineer", company: "Acme", location: "Remote", url: "https://x" }],
+      warnings: [],
+      failures: [],
+    });
+    fetchBoardJobsMock.mockResolvedValue([job(1)]);
+
+    const error = await runSync("cron").catch((e) => e);
+
+    expect(error).toBeInstanceOf(SyncDatabaseError);
+    expect(error.message).toBe("db boom");
+    expect(insertMock.mock.calls[0][0]).toMatchObject({ error: "db boom\ndb boom", messages: 1 });
+  });
+
+  test("Greenhouse is omitted from source_results when the flag is off", async () => {
+    setup();
+    await runSync("cron");
+    const row = insertMock.mock.calls[0][0];
+    expect(row.source_results).toEqual([{ source: "linkedin", found: 0, inserted: 0, skipped: 0, failed: 0 }]);
+  });
+
+  test("source_results per board; inserted + skipped = found and sums match the run", async () => {
+    vi.stubEnv("GREENHOUSE_SYNC_ENABLED", "true");
+    setup();
+    fetchBoardJobsMock.mockImplementation((board: { identifier: string }) =>
+      board.identifier === "alpha" ? Promise.reject(new Error("HTTP 503")) : Promise.resolve([job(1), job(2)])
+    );
+
+    await runSync("cron");
+
+    const row = insertMock.mock.calls[0][0];
+    expect(row.source_results).toEqual([
+      { source: "linkedin", found: 0, inserted: 0, skipped: 0, failed: 0 },
+      { source: "greenhouse", board: "alpha", found: 0, inserted: 0, skipped: 0, failed: 1 },
+      { source: "greenhouse", board: "beta", found: 2, inserted: 1, skipped: 1, failed: 0 },
+    ]);
+    expect(row).toMatchObject({ unique_jobs: 2, inserted: 1, skipped: 1 });
+  });
+});
+
+describe("runSync run id, stamp and chunking", () => {
+  const card = (n: number) => ({
+    jobId: String(n),
+    title: "Widget Engineer",
+    company: "Acme",
+    location: "Remote",
+    url: `https://x/${n}`,
+  });
+
+  function gmailWith(count: number) {
+    fetchLinkedInAlertsMock.mockResolvedValue([{ id: "m1", threadId: "t1", date: "", subject: "" }]);
+    fetchMessageContentMock.mockResolvedValue({ id: "m1", internalDate: "1000", text: "body" });
+    parseLinkedInAlertMock.mockReturnValue({
+      cards: Array.from({ length: count }, (_, i) => card(i + 1)),
+      warnings: [],
+      failures: [],
+    });
+  }
+
+  test("same runId on every upserted row and on sync_runs", async () => {
+    upsertMock.mockImplementation((chunk: unknown[]) => ({
+      select: () => Promise.resolve({ data: chunk.map((_, i) => ({ id: i })), error: null }),
+    }));
+    fromMock.mockImplementation((table: string) =>
+      table === "vacancies" ? { upsert: upsertMock } : syncRunsTable()
+    );
+    gmailWith(3);
+
+    await runSync("cron");
+
+    const rows = upsertMock.mock.calls.flatMap((c: any[]) => c[0]);
+    const runId = insertMock.mock.calls[0][0].run_id;
+    expect(runId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(rows).toHaveLength(3);
+    expect(rows.every((r: any) => r.sync_run_id === runId)).toBe(true);
+  });
+
+  test("450 rows go in 3 chunks", async () => {
+    upsertMock.mockImplementation((chunk: unknown[]) => ({
+      select: () => Promise.resolve({ data: chunk.map((_, i) => ({ id: i })), error: null }),
+    }));
+    fromMock.mockImplementation((table: string) =>
+      table === "vacancies" ? { upsert: upsertMock } : syncRunsTable()
+    );
+    gmailWith(450);
+
+    const result = await runSync("cron");
+
+    expect(upsertMock.mock.calls.map((c: any[]) => c[0].length)).toEqual([200, 200, 50]);
+    expect(result).toMatchObject({ unique: 450, inserted: 450, skipped: 0 });
+  });
+
+  test("chunk 2 fails: chunk 1 stays counted and SyncDatabaseError is thrown", async () => {
+    let call = 0;
+    upsertMock.mockImplementation((chunk: unknown[]) => ({
+      select: () =>
+        Promise.resolve(
+          ++call === 2
+            ? { data: null, error: { message: "chunk boom" } }
+            : { data: chunk.map((_, i) => ({ id: i })), error: null }
+        ),
+    }));
+    fromMock.mockImplementation((table: string) =>
+      table === "vacancies" ? { upsert: upsertMock } : syncRunsTable()
+    );
+    gmailWith(450);
+
+    await expect(runSync("cron")).rejects.toBeInstanceOf(SyncDatabaseError);
+
+    expect(upsertMock).toHaveBeenCalledTimes(2);
+    expect(insertMock.mock.calls[0][0]).toMatchObject({
+      status: "error",
+      inserted: 200,
+      skipped: 0,
+      unique_jobs: 450,
+      source_results: [{ source: "linkedin", found: 450, inserted: 200, skipped: 0, failed: 0 }],
     });
   });
 });

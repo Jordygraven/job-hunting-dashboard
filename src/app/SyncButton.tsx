@@ -3,7 +3,7 @@
 
 import { useActionState } from "react";
 import { runManualSync } from "./actions";
-import { pluralize } from "./SyncDetails";
+import { pluralize } from "@/lib/format/pluralize";
 import type { SyncResult } from "@/lib/sync/runSync";
 
 type ActionState =

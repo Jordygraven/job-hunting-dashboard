@@ -1,12 +1,30 @@
 // src/lib/sync/syncRunRecord.ts
+export type SyncSource = "linkedin" | "greenhouse";
+
+// Stored shape. Rows written before epic 11 have no source or board.
 export interface SyncRunDetail {
   messageId: string;
   jobId: string | null;
   reason: string;
+  source?: SyncSource;
+  board?: string;
+}
+
+// Read side: the mapper always fills source.
+export type ResolvedSyncRunDetail = SyncRunDetail & { source: SyncSource };
+
+export interface SourceResult {
+  source: SyncSource;
+  board?: string;
+  found: number;
+  inserted: number;
+  skipped: number;
+  failed: number;
 }
 
 export interface SyncRunRecord {
   id: number;
+  runId: string | null;
   trigger: "cron" | "manual";
   status: "ok" | "error";
   startedAt: string;
@@ -18,8 +36,9 @@ export interface SyncRunRecord {
   skipped: number | null;
   warnings: number | null;
   parserFailureCount: number | null;
-  parserFailures: SyncRunDetail[];
-  failures: SyncRunDetail[];
-  warningDetails: SyncRunDetail[];
+  sourceResults: SourceResult[] | null;
+  parserFailures: ResolvedSyncRunDetail[];
+  failures: ResolvedSyncRunDetail[];
+  warningDetails: ResolvedSyncRunDetail[];
   error: string | null;
 }
