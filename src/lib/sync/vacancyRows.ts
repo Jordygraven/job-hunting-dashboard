@@ -1,14 +1,14 @@
 import type { LinkedInCard } from "@/lib/parsers/linkedin";
 
 export interface VacancyRow {
-  source: "linkedin";
+  source: "linkedin" | "greenhouse";
   source_job_id: string;
   title: string;
   company: string;
   location: string | null;
   url: string;
   first_seen_at: string;
-  source_message_id: string;
+  source_message_id: string | null;
 }
 
 export function toVacancyRows(
