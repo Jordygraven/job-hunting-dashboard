@@ -32,3 +32,9 @@
 - Final review: `deriveVacancyStatus`'s new throw-on-invariant-violation (a latest "applied" row with null `appliedOn`) now sits behind a real caller (page load) for the first time, and a trip there 500s the whole `/` route (sync panel + all four tabs), same as any other DB-read error already did before this branch. Non-blocking — the DB CHECK constraint makes it practically unreachable — but if per-row degradation is ever wanted instead of page-wide failure, this is where to start.
 - Final review (repo convention): this plan's own sample test code omitted `afterEach(() => cleanup())` from `@testing-library/react` in two separate new `// @vitest-environment jsdom` test files; both had to be fixed independently to make the plan's own tests pass. This repo has no global test cleanup configured, so any future jsdom test file needs this hook added by hand.
 
+
+## Epic 11 follow-ups
+
+- Epic 11b: 'duplicate' ignore reason and cross-source dedup.
+- Unique displayName per Greenhouse board (test exists). Add vacancies.board if renames become common.
+- greenhouseDryRun exit code not covered by a test.

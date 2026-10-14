@@ -36,6 +36,8 @@
   --status-success-fg: #86efac;
   --status-rejected-bg: rgba(248, 113, 113, 0.14);
   --status-rejected-fg: #fca5a5;
+  --status-warning-bg: rgba(251, 191, 36, 0.14);
+  --status-warning-fg: #fcd34d;
 
   --surface-row-starred: rgba(129, 140, 248, 0.08);
 
@@ -91,6 +93,8 @@
   --color-status-success-fg: var(--status-success-fg);
   --color-status-rejected-bg: var(--status-rejected-bg);
   --color-status-rejected-fg: var(--status-rejected-fg);
+  --color-status-warning-bg: var(--status-warning-bg);
+  --color-status-warning-fg: var(--status-warning-fg);
 
   --color-surface-row-starred: var(--surface-row-starred);
 
