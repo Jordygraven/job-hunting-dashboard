@@ -63,4 +63,12 @@ describe("GET /api/sync", () => {
     const response = await GET(request("Basic secret123"));
     expect(response.status).toBe(401);
   });
+
+  test("returns 500 'sync failed' without detail for a non-database error", async () => {
+    vi.stubEnv("CRON_SECRET", "secret123");
+    runSyncMock.mockRejectedValue(new Error("secret gmail detail"));
+    const response = await GET(request("Bearer secret123"));
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "sync failed" });
+  });
 });

@@ -18,6 +18,7 @@ async function main() {
       console.log(`title passes, location fails (${r.locationRejected.length}, first 5):`);
       r.locationRejected.slice(0, 5).forEach((x) => console.log(line(x)));
     } catch (error) {
+      process.exitCode = 1;
       console.log(`FAILED: ${error instanceof Error ? error.message : "unknown error"}`);
     }
   }
