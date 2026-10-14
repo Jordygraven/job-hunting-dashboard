@@ -12,6 +12,7 @@ afterEach(() => {
 function run(overrides: Partial<SyncRunRecord> = {}): SyncRunRecord {
   return {
     id: 1,
+    runId: null,
     trigger: "cron",
     status: "ok",
     startedAt: "2026-10-06T11:00:00.000Z",
@@ -23,6 +24,7 @@ function run(overrides: Partial<SyncRunRecord> = {}): SyncRunRecord {
     skipped: 0,
     warnings: 0,
     parserFailureCount: 0,
+    sourceResults: null,
     parserFailures: [],
     failures: [],
     warningDetails: [],
@@ -43,7 +45,7 @@ describe("SyncDetails — warnings without recorded details", () => {
         recentRuns={[
           run({
             warnings: 1,
-            warningDetails: [{ messageId: "m1", jobId: "1", reason: "unrecognized extra line inside card" }],
+            warningDetails: [{ messageId: "m1", jobId: "1", reason: "unrecognized extra line inside card", source: "linkedin" }],
           }),
         ]}
         defaultOpen={true}

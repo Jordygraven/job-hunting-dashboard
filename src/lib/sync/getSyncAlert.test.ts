@@ -8,6 +8,7 @@ const NOW = new Date("2026-10-06T12:00:00.000Z");
 function run(overrides: Partial<SyncRunRecord> = {}): SyncRunRecord {
   return {
     id: 1,
+    runId: null,
     trigger: "cron",
     status: "ok",
     startedAt: "2026-10-06T11:00:00.000Z",
@@ -19,6 +20,7 @@ function run(overrides: Partial<SyncRunRecord> = {}): SyncRunRecord {
     skipped: 0,
     warnings: 0,
     parserFailureCount: 0,
+    sourceResults: null,
     parserFailures: [],
     failures: [],
     warningDetails: [],
@@ -51,22 +53,22 @@ describe("getSyncAlert", () => {
   });
 
   test("alerts when failures is non-empty, including messageId and reason", () => {
-    const failingRun = run({ failures: [{ messageId: "m1", jobId: null, reason: "fetch timeout" }] });
+    const failingRun = run({ failures: [{ messageId: "m1", jobId: null, reason: "fetch timeout", source: "linkedin" }] });
     expect(getSyncAlert(failingRun, NOW)).toEqual([
-      { type: "failures", failures: [{ messageId: "m1", jobId: null, reason: "fetch timeout" }] },
+      { type: "failures", failures: [{ messageId: "m1", jobId: null, reason: "fetch timeout", source: "linkedin" }] },
     ]);
   });
 
   test("alerts when parser_failure_count is greater than zero", () => {
     const parserFailingRun = run({
       parserFailureCount: 1,
-      parserFailures: [{ messageId: "m1", jobId: "123", reason: "card is missing a title or company" }],
+      parserFailures: [{ messageId: "m1", jobId: "123", reason: "card is missing a title or company", source: "linkedin" }],
     });
     expect(getSyncAlert(parserFailingRun, NOW)).toEqual([
       {
         type: "parser-failures",
         count: 1,
-        parserFailures: [{ messageId: "m1", jobId: "123", reason: "card is missing a title or company" }],
+        parserFailures: [{ messageId: "m1", jobId: "123", reason: "card is missing a title or company", source: "linkedin" }],
       },
     ]);
   });
