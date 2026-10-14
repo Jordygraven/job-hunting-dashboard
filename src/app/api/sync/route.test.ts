@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 let runSyncMock: any;
 
@@ -21,6 +21,10 @@ function request(authHeader: string | null): Request {
 beforeEach(() => {
   runSyncMock = vi.fn();
   vi.unstubAllEnvs();
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 describe("GET /api/sync", () => {
@@ -64,11 +68,15 @@ describe("GET /api/sync", () => {
     expect(response.status).toBe(401);
   });
 
-  test("returns 500 'sync failed' without detail for a non-database error", async () => {
+  test("returns 500 'sync failed' without detail and logs a non-database error", async () => {
     vi.stubEnv("CRON_SECRET", "secret123");
-    runSyncMock.mockRejectedValue(new Error("secret gmail detail"));
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const error = new Error("secret gmail detail");
+    runSyncMock.mockRejectedValue(error);
     const response = await GET(request("Bearer secret123"));
     expect(response.status).toBe(500);
     expect(await response.json()).toEqual({ error: "sync failed" });
+    expect(consoleError).toHaveBeenCalledTimes(1);
+    expect(consoleError).toHaveBeenCalledWith(error);
   });
 });

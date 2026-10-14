@@ -27,6 +27,7 @@ export async function GET(request: Request) {
     if (error instanceof SyncDatabaseError) {
       return Response.json({ error: "database error" }, { status: 500 });
     }
+    console.error(error);
     return Response.json({ error: "sync failed" }, { status: 500 });
   }
 }
