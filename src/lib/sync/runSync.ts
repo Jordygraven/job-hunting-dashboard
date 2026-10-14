@@ -6,6 +6,9 @@ import { toParserFailures } from "@/lib/sync/parserFailures";
 import { toSyncWarnings } from "@/lib/sync/syncWarnings";
 import type { SyncRunDetail } from "@/lib/sync/syncRunRecord";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { GREENHOUSE_BOARDS } from "@/config/greenhouseBoards";
+import { fetchBoardJobs } from "@/lib/greenhouse/fetchBoard";
+import { processBoard } from "@/lib/greenhouse/processBoard";
 
 export type SyncTrigger = "cron" | "manual";
 
@@ -83,115 +86,197 @@ async function recordSyncRun(args: {
   }
 }
 
+interface Counts {
+  messages: number;
+  cards: number;
+  unique: number;
+  inserted: number;
+  skipped: number;
+}
+
+async function upsertRows(rows: VacancyRow[]): Promise<number> {
+  if (rows.length === 0) return 0;
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("vacancies")
+    .upsert(rows, { onConflict: "source,source_job_id", ignoreDuplicates: true })
+    .select("id");
+
+  if (error) {
+    throw new SyncDatabaseError(reasonFor(error));
+  }
+  return data?.length ?? 0;
+}
+
+async function syncGmail(
+  counts: Counts,
+  failures: SyncRunDetail[],
+  parserFailures: SyncRunDetail[],
+  warningDetails: SyncRunDetail[]
+): Promise<void> {
+  const alerts = await fetchLinkedInAlerts();
+
+  const fetched = await Promise.allSettled(
+    alerts.map((alert) => fetchMessageContent(alert.id))
+  );
+
+  const contents: { id: string; internalDate: number; text: string }[] = [];
+  for (let i = 0; i < fetched.length; i++) {
+    const result = fetched[i];
+    if (result.status === "fulfilled") {
+      contents.push({
+        id: result.value.id,
+        internalDate: Number(result.value.internalDate),
+        text: result.value.text,
+      });
+    } else {
+      failures.push({ messageId: alerts[i].id, jobId: null, reason: reasonFor(result.reason) });
+    }
+  }
+
+  contents.sort((a, b) => a.internalDate - b.internalDate);
+
+  const allRows: VacancyRow[] = [];
+
+  for (const message of contents) {
+    try {
+      const { cards, warnings: cardWarnings, failures: cardFailures } = parseLinkedInAlert(
+        message.text
+      );
+      parserFailures.push(...toParserFailures(message.id, cardFailures));
+      warningDetails.push(...toSyncWarnings(message.id, cardWarnings));
+      allRows.push(...toVacancyRows(cards, message.id, new Date(message.internalDate)));
+    } catch (error) {
+      failures.push({ messageId: message.id, jobId: null, reason: reasonFor(error) });
+    }
+  }
+
+  const uniqueRows = uniqueVacancyRows(allRows);
+  counts.messages = alerts.length;
+  counts.cards = allRows.length;
+  counts.unique += uniqueRows.length;
+
+  const inserted = await upsertRows(uniqueRows);
+  counts.inserted += inserted;
+  counts.skipped += uniqueRows.length - inserted;
+}
+
+async function syncGreenhouse(counts: Counts, failures: SyncRunDetail[]): Promise<void> {
+  const firstSeenAt = new Date();
+
+  for (const board of GREENHOUSE_BOARDS) {
+    const label = `greenhouse:${board.identifier}`;
+    let processed;
+    try {
+      processed = processBoard(await fetchBoardJobs(board), board, firstSeenAt);
+    } catch (error) {
+      failures.push({ messageId: label, jobId: null, reason: reasonFor(error) });
+      continue;
+    }
+    for (const invalid of processed.invalid) {
+      failures.push({ messageId: label, jobId: invalid.jobId, reason: invalid.reason });
+    }
+
+    const rows = uniqueVacancyRows(processed.passing);
+    const inserted = await upsertRows(rows);
+    counts.unique += rows.length;
+    counts.inserted += inserted;
+    counts.skipped += rows.length - inserted;
+  }
+}
+
 export async function runSync(trigger: SyncTrigger): Promise<SyncResult> {
   const startedAt = new Date();
   const failures: SyncRunDetail[] = [];
   const parserFailures: SyncRunDetail[] = [];
   const warningDetails: SyncRunDetail[] = [];
+  const counts: Counts = { messages: 0, cards: 0, unique: 0, inserted: 0, skipped: 0 };
+
+  let crashed = false;
+  let crash: unknown;
 
   try {
-    const alerts = await fetchLinkedInAlerts();
-
-    const fetched = await Promise.allSettled(
-      alerts.map((alert) => fetchMessageContent(alert.id))
-    );
-
-    const contents: { id: string; internalDate: number; text: string }[] = [];
-    for (let i = 0; i < fetched.length; i++) {
-      const result = fetched[i];
-      if (result.status === "fulfilled") {
-        contents.push({
-          id: result.value.id,
-          internalDate: Number(result.value.internalDate),
-          text: result.value.text,
-        });
-      } else {
-        failures.push({ messageId: alerts[i].id, jobId: null, reason: reasonFor(result.reason) });
-      }
-    }
-
-    contents.sort((a, b) => a.internalDate - b.internalDate);
-
-    const allRows: VacancyRow[] = [];
-
-    for (const message of contents) {
-      try {
-        const { cards, warnings: cardWarnings, failures: cardFailures } = parseLinkedInAlert(
-          message.text
-        );
-        parserFailures.push(...toParserFailures(message.id, cardFailures));
-        warningDetails.push(...toSyncWarnings(message.id, cardWarnings));
-        allRows.push(...toVacancyRows(cards, message.id, new Date(message.internalDate)));
-      } catch (error) {
-        failures.push({ messageId: message.id, jobId: null, reason: reasonFor(error) });
-      }
-    }
-
-    const uniqueRows = uniqueVacancyRows(allRows);
-
-    let inserted = 0;
-    if (uniqueRows.length > 0) {
-      const supabase = getSupabaseServerClient();
-      const { data, error } = await supabase
-        .from("vacancies")
-        .upsert(uniqueRows, { onConflict: "source,source_job_id", ignoreDuplicates: true })
-        .select("id");
-
-      if (error) {
-        throw new SyncDatabaseError(reasonFor(error));
-      }
-
-      inserted = data?.length ?? 0;
-    }
-
-    const skipped = uniqueRows.length - inserted;
-    const result: SyncResult = {
-      messages: alerts.length,
-      cards: allRows.length,
-      unique: uniqueRows.length,
-      inserted,
-      skipped,
-      warnings: warningDetails.length,
-      parserFailureCount: parserFailures.length,
-      parserFailures,
-      failures,
-      warningDetails,
-    };
-
-    await recordSyncRun({
-      trigger,
-      startedAt,
-      finishedAt: new Date(),
-      status: "ok",
-      counts: {
-        messages: result.messages,
-        cards: result.cards,
-        uniqueJobs: result.unique,
-        inserted: result.inserted,
-        skipped: result.skipped,
-        warnings: result.warnings,
-        parserFailureCount: result.parserFailureCount,
-      },
-      parserFailures: result.parserFailures,
-      failures: result.failures,
-      warningDetails: result.warningDetails,
-      error: null,
-    });
-
-    return result;
+    await syncGmail(counts, failures, parserFailures, warningDetails);
   } catch (error) {
+    crashed = true;
+    crash = error;
+    // A database error is already reported through the run's `error` field.
+    if (!(error instanceof SyncDatabaseError)) {
+      failures.push({ messageId: "gmail", jobId: null, reason: reasonFor(error) });
+    }
+  }
+
+  const greenhouseEnabled = process.env.GREENHOUSE_SYNC_ENABLED === "true";
+  if (greenhouseEnabled) {
+    try {
+      await syncGreenhouse(counts, failures);
+    } catch (error) {
+      if (!crashed) {
+        crashed = true;
+        crash = error;
+      }
+    }
+  }
+
+  if (crashed) {
     await recordSyncRun({
       trigger,
       startedAt,
       finishedAt: new Date(),
       status: "error",
-      counts: null,
+      // Counts so far are only kept when Greenhouse ran, as Gmail-only crashes record none.
+      counts: greenhouseEnabled
+        ? {
+            messages: counts.messages,
+            cards: counts.cards,
+            uniqueJobs: counts.unique,
+            inserted: counts.inserted,
+            skipped: counts.skipped,
+            warnings: warningDetails.length,
+            parserFailureCount: parserFailures.length,
+          }
+        : null,
       parserFailures,
       failures,
       warningDetails,
-      error: reasonFor(error),
+      error: reasonFor(crash),
     });
 
-    throw error;
+    throw crash;
   }
+
+  const result: SyncResult = {
+    messages: counts.messages,
+    cards: counts.cards,
+    unique: counts.unique,
+    inserted: counts.inserted,
+    skipped: counts.skipped,
+    warnings: warningDetails.length,
+    parserFailureCount: parserFailures.length,
+    parserFailures,
+    failures,
+    warningDetails,
+  };
+
+  await recordSyncRun({
+    trigger,
+    startedAt,
+    finishedAt: new Date(),
+    status: "ok",
+    counts: {
+      messages: result.messages,
+      cards: result.cards,
+      uniqueJobs: result.unique,
+      inserted: result.inserted,
+      skipped: result.skipped,
+      warnings: result.warnings,
+      parserFailureCount: result.parserFailureCount,
+    },
+    parserFailures: result.parserFailures,
+    failures: result.failures,
+    warningDetails: result.warningDetails,
+    error: null,
+  });
+
+  return result;
 }

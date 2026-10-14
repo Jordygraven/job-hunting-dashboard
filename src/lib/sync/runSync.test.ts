@@ -5,6 +5,8 @@ let fetchMessageContentMock: any;
 let parseLinkedInAlertMock: any;
 let fromMock: any;
 let insertMock: any;
+let fetchBoardJobsMock: any;
+let upsertMock: any;
 
 vi.mock("@/lib/gmail/fetchLinkedInAlerts", () => ({
   fetchLinkedInAlerts: (...args: any[]) => fetchLinkedInAlertsMock(...args),
@@ -17,6 +19,16 @@ vi.mock("@/lib/parsers/linkedin", () => ({
 }));
 vi.mock("@/lib/supabase/server", () => ({
   getSupabaseServerClient: () => ({ from: (...args: any[]) => fromMock(...args) }),
+}));
+
+vi.mock("@/lib/greenhouse/fetchBoard", () => ({
+  fetchBoardJobs: (...args: any[]) => fetchBoardJobsMock(...args),
+}));
+vi.mock("@/config/greenhouseBoards", () => ({
+  GREENHOUSE_BOARDS: [
+    { identifier: "alpha", displayName: "Alpha" },
+    { identifier: "beta", displayName: "Beta" },
+  ],
 }));
 
 import { runSync, SyncDatabaseError } from "./runSync";
@@ -35,7 +47,10 @@ beforeEach(() => {
   parseLinkedInAlertMock = vi.fn();
   fromMock = vi.fn();
   insertMock = vi.fn();
+  fetchBoardJobsMock = vi.fn();
+  upsertMock = vi.fn();
   vi.clearAllMocks();
+  vi.unstubAllEnvs();
   insertMock.mockResolvedValue({ error: null });
 });
 
@@ -144,7 +159,7 @@ describe("runSync crash before any message is fetched", () => {
       warnings: null,
       parser_failure_count: null,
       parser_failures: [],
-      failures: [],
+      failures: [{ messageId: "gmail", jobId: null, reason: "gmail unreachable" }],
       error: "gmail unreachable",
     });
   });
@@ -233,5 +248,129 @@ describe("runSync when the sync_runs insert itself fails", () => {
     expect(result.messages).toBe(0);
     expect(consoleErrorSpy).toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
+  });
+});
+
+describe("runSync Greenhouse step", () => {
+  const job = (id: number, title = "Product Manager", location = "Kuala Lumpur, Malaysia") => ({
+    id,
+    title,
+    location: { name: location },
+    absolute_url: `https://gh/${id}`,
+  });
+
+  function setup(upsertResult: { data: unknown; error: unknown } = { data: [{ id: 1 }], error: null }) {
+    fetchLinkedInAlertsMock.mockResolvedValue([]);
+    upsertMock.mockReturnValue({ select: () => Promise.resolve(upsertResult) });
+    fromMock.mockImplementation((table: string) =>
+      table === "vacancies" ? { upsert: upsertMock } : syncRunsTable()
+    );
+  }
+
+  test("skipped when the env var is unset or not exactly true", async () => {
+    setup();
+    for (const value of [undefined, "", "TRUE", "1"]) {
+      vi.stubEnv("GREENHOUSE_SYNC_ENABLED", value as string);
+      const result = await runSync("cron");
+      expect(result.failures).toEqual([]);
+    }
+    expect(fetchBoardJobsMock).not.toHaveBeenCalled();
+    expect(upsertMock).not.toHaveBeenCalled();
+  });
+
+  test("one board failing does not stop the other and is a soft failure", async () => {
+    vi.stubEnv("GREENHOUSE_SYNC_ENABLED", "true");
+    setup();
+    fetchBoardJobsMock.mockImplementation((board: { identifier: string }) =>
+      board.identifier === "alpha" ? Promise.reject(new Error("HTTP 503")) : Promise.resolve([job(1)])
+    );
+
+    const result = await runSync("cron");
+
+    expect(result.failures).toEqual([{ messageId: "greenhouse:alpha", jobId: null, reason: "HTTP 503" }]);
+    expect(result).toMatchObject({ messages: 0, cards: 0, unique: 1, inserted: 1, skipped: 0 });
+    expect(upsertMock).toHaveBeenCalledTimes(1);
+    expect(upsertMock.mock.calls[0][0]).toEqual([
+      expect.objectContaining({
+        source: "greenhouse",
+        source_job_id: "1",
+        company: "Beta",
+        source_message_id: null,
+      }),
+    ]);
+    expect(insertMock.mock.calls[0][0]).toMatchObject({ status: "ok", inserted: 1 });
+  });
+
+  test("invalid jobs become soft failures for their board and only passing jobs are written", async () => {
+    vi.stubEnv("GREENHOUSE_SYNC_ENABLED", "true");
+    setup();
+    fetchBoardJobsMock.mockImplementation((board: { identifier: string }) =>
+      Promise.resolve(
+        board.identifier === "alpha"
+          ? [job(1), job(1), job(2, "Software Engineer"), { id: 3, title: "Product Manager" }]
+          : []
+      )
+    );
+
+    const result = await runSync("cron");
+
+    expect(result.failures).toEqual([
+      { messageId: "greenhouse:alpha", jobId: "3", reason: "job missing absolute_url" },
+    ]);
+    expect(upsertMock.mock.calls[0][0]).toHaveLength(1);
+    expect(upsertMock).toHaveBeenCalledTimes(1);
+  });
+
+  test("a second sync adds nothing", async () => {
+    vi.stubEnv("GREENHOUSE_SYNC_ENABLED", "true");
+    setup();
+    fetchBoardJobsMock.mockImplementation((board: { identifier: string }) =>
+      Promise.resolve(board.identifier === "alpha" ? [job(1), job(2)] : [])
+    );
+
+    const first = await runSync("cron");
+    expect(first).toMatchObject({ unique: 2, inserted: 1 });
+
+    setup({ data: [], error: null });
+    const second = await runSync("cron");
+
+    expect(second).toMatchObject({ unique: 2, inserted: 0, skipped: 2 });
+    expect(upsertMock).toHaveBeenLastCalledWith(expect.any(Array), {
+      onConflict: "source,source_job_id",
+      ignoreDuplicates: true,
+    });
+  });
+
+  test("Gmail crash still runs Greenhouse, then records an error and rethrows", async () => {
+    vi.stubEnv("GREENHOUSE_SYNC_ENABLED", "true");
+    setup();
+    fetchLinkedInAlertsMock.mockRejectedValue(new Error("gmail unreachable"));
+    fetchBoardJobsMock.mockResolvedValue([job(1)]);
+
+    await expect(runSync("cron")).rejects.toThrow("gmail unreachable");
+
+    expect(upsertMock).toHaveBeenCalledTimes(2);
+    expect(insertMock).toHaveBeenCalledTimes(1);
+    expect(insertMock.mock.calls[0][0]).toMatchObject({
+      status: "error",
+      error: "gmail unreachable",
+      inserted: 2,
+      failures: [{ messageId: "gmail", jobId: null, reason: "gmail unreachable" }],
+    });
+  });
+
+  test("Greenhouse database error throws SyncDatabaseError and logs counts so far", async () => {
+    vi.stubEnv("GREENHOUSE_SYNC_ENABLED", "true");
+    setup({ data: null, error: { message: "duplicate key" } });
+    fetchBoardJobsMock.mockResolvedValue([job(1)]);
+
+    await expect(runSync("cron")).rejects.toBeInstanceOf(SyncDatabaseError);
+
+    expect(insertMock.mock.calls[0][0]).toMatchObject({
+      status: "error",
+      error: "duplicate key",
+      messages: 0,
+      unique_jobs: 0,
+    });
   });
 });
