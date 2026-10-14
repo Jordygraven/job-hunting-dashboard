@@ -31,7 +31,8 @@ vi.mock("@/config/greenhouseBoards", () => ({
   ],
 }));
 
-import { runSync, SyncDatabaseError } from "./runSync";
+import { runSync } from "./runSync";
+import { SyncDatabaseError } from "./upsertChunks";
 
 function upsertTable(result: { data: unknown; error: unknown }) {
   return { upsert: () => ({ select: () => Promise.resolve(result) }) };
@@ -81,7 +82,7 @@ describe("runSync success", () => {
       parserFailureCount: 0,
       parserFailures: [],
       failures: [],
-      warningDetails: [{ messageId: "m1", jobId: "1", reason: "unrecognized extra line inside card" }],
+      warningDetails: [{ messageId: "m1", jobId: "1", reason: "unrecognized extra line inside card", source: "linkedin" }],
     });
 
     expect(insertMock).toHaveBeenCalledTimes(1);
@@ -98,11 +99,30 @@ describe("runSync success", () => {
       parser_failure_count: 0,
       parser_failures: [],
       failures: [],
-      warning_details: [{ messageId: "m1", jobId: "1", reason: "unrecognized extra line inside card" }],
+      warning_details: [{ messageId: "m1", jobId: "1", reason: "unrecognized extra line inside card", source: "linkedin" }],
       error: null,
     });
     expect(row.started_at).toBeTypeOf("string");
     expect(row.finished_at).toBeTypeOf("string");
+  });
+
+  test("parser failures and warning details are stored with source linkedin", async () => {
+    fromMock.mockImplementation((table: string) =>
+      table === "vacancies" ? upsertTable({ data: [], error: null }) : syncRunsTable()
+    );
+    fetchLinkedInAlertsMock.mockResolvedValue([{ id: "m1", threadId: "t1", date: "", subject: "" }]);
+    fetchMessageContentMock.mockResolvedValue({ id: "m1", internalDate: "1000", text: "body" });
+    parseLinkedInAlertMock.mockReturnValue({
+      cards: [],
+      warnings: [{ reason: "w", snippet: "s", jobId: "1" }],
+      failures: [{ reason: "f", snippet: "s", jobId: "2" }],
+    });
+
+    await runSync("cron");
+
+    const row = insertMock.mock.calls[0][0];
+    expect(row.parser_failures).toEqual([{ messageId: "m1", jobId: "2", reason: "f", source: "linkedin" }]);
+    expect(row.warning_details).toEqual([{ messageId: "m1", jobId: "1", reason: "w", source: "linkedin" }]);
   });
 
   test("some individual messages fail, overall run still succeeds", async () => {

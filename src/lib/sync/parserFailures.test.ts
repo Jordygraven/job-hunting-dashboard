@@ -15,7 +15,7 @@ Vacature weergeven: https://www.linkedin.com/comm/jobs/view/1000000006/?[strippe
     const result = toParserFailures("msg-1", failures);
 
     expect(result).toEqual([
-      { messageId: "msg-1", jobId: "1000000006", reason: "card is missing a title or company" },
+      { messageId: "msg-1", jobId: "1000000006", reason: "card is missing a title or company", source: "linkedin" },
     ]);
   });
 
@@ -33,7 +33,7 @@ Vacature weergeven: https://www.linkedin.com/comm/jobs/view/?[stripped]
     const result = toParserFailures("msg-1", failures);
 
     expect(result).toEqual([
-      { messageId: "msg-1", jobId: null, reason: "anchor link has no numeric job id" },
+      { messageId: "msg-1", jobId: null, reason: "anchor link has no numeric job id", source: "linkedin" },
     ]);
   });
 

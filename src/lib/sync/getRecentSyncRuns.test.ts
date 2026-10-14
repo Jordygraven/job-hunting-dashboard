@@ -82,6 +82,13 @@ describe("mapSyncRunRow", () => {
     ]);
   });
 
+  test("old rows: parser failures and warnings without source map to linkedin", () => {
+    const old = { messageId: "m1", jobId: "1", reason: "r" };
+    const mapped = mapSyncRunRow(validRow({ parser_failures: [old], warning_details: [old] }));
+    expect(mapped.parserFailures).toEqual([{ ...old, source: "linkedin" }]);
+    expect(mapped.warningDetails).toEqual([{ ...old, source: "linkedin" }]);
+  });
+
   test("new rows: stored source and board win; no prefix stripping", () => {
     const row = validRow({
       failures: [{ messageId: "bybit", jobId: null, reason: "HTTP 503", source: "greenhouse", board: "bybit" }],

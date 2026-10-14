@@ -26,8 +26,6 @@ export interface SyncResult {
   warningDetails: SyncRunDetail[];
 }
 
-export { SyncDatabaseError };
-
 const UPSERT_CHUNK_SIZE = 200;
 
 function hasMessage(error: unknown): error is { message: unknown } {

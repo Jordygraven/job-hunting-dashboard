@@ -18,7 +18,7 @@ Vacature weergeven: https://www.linkedin.com/comm/jobs/view/1000000007/?[strippe
     const result = toSyncWarnings("msg-1", warnings);
 
     expect(result).toEqual([
-      { messageId: "msg-1", jobId: "1000000007", reason: "unrecognized extra line inside card" },
+      { messageId: "msg-1", jobId: "1000000007", reason: "unrecognized extra line inside card", source: "linkedin" },
     ]);
   });
 
