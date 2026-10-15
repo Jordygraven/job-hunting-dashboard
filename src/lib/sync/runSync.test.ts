@@ -7,6 +7,9 @@ let fromMock: any;
 let insertMock: any;
 let fetchBoardJobsMock: any;
 let upsertMock: any;
+let getBoardsMock: any;
+let getLatestChecksMock: any;
+let checkInsertMock: any;
 
 vi.mock("@/lib/gmail/fetchLinkedInAlerts", () => ({
   fetchLinkedInAlerts: (...args: any[]) => fetchLinkedInAlertsMock(...args),
@@ -21,18 +24,20 @@ vi.mock("@/lib/supabase/server", () => ({
   getSupabaseServerClient: () => ({ from: (...args: any[]) => fromMock(...args) }),
 }));
 
-vi.mock("@/lib/greenhouse/fetchBoard", () => ({
+vi.mock("@/lib/greenhouse/fetchBoard", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/greenhouse/fetchBoard")>()),
   fetchBoardJobs: (...args: any[]) => fetchBoardJobsMock(...args),
 }));
-vi.mock("@/config/greenhouseBoards", () => ({
-  GREENHOUSE_BOARDS: [
-    { identifier: "alpha", displayName: "Alpha" },
-    { identifier: "beta", displayName: "Beta" },
-  ],
+vi.mock("@/lib/boards/getBoards", () => ({
+  getBoards: (...args: any[]) => getBoardsMock(...args),
+}));
+vi.mock("@/lib/boards/getLatestChecks", () => ({
+  getLatestChecks: (...args: any[]) => getLatestChecksMock(...args),
 }));
 
 import { runSync } from "./runSync";
 import { SyncDatabaseError } from "./upsertChunks";
+import { BoardHttpError } from "@/lib/greenhouse/fetchBoard";
 
 function upsertTable(result: { data: unknown; error: unknown }) {
   return { upsert: () => ({ select: () => Promise.resolve(result) }) };
@@ -50,6 +55,12 @@ beforeEach(() => {
   insertMock = vi.fn();
   fetchBoardJobsMock = vi.fn();
   upsertMock = vi.fn();
+  getBoardsMock = vi.fn().mockResolvedValue([
+    { id: 1, portal: "greenhouse", identifier: "alpha", displayName: "Alpha" },
+    { id: 2, portal: "greenhouse", identifier: "beta", displayName: "Beta" },
+  ]);
+  getLatestChecksMock = vi.fn().mockResolvedValue(new Map());
+  checkInsertMock = vi.fn().mockResolvedValue({ error: null });
   vi.clearAllMocks();
   vi.unstubAllEnvs();
   insertMock.mockResolvedValue({ error: null });
@@ -284,7 +295,11 @@ describe("runSync Greenhouse step", () => {
     fetchLinkedInAlertsMock.mockResolvedValue([]);
     upsertMock.mockReturnValue({ select: () => Promise.resolve(upsertResult) });
     fromMock.mockImplementation((table: string) =>
-      table === "vacancies" ? { upsert: upsertMock } : syncRunsTable()
+      table === "vacancies"
+        ? { upsert: upsertMock }
+        : table === "board_checks"
+          ? { insert: checkInsertMock }
+          : syncRunsTable()
     );
   }
 
@@ -375,6 +390,144 @@ describe("runSync Greenhouse step", () => {
       onConflict: "source,source_job_id",
       ignoreDuplicates: true,
     });
+  });
+
+  const DAY = 24 * 60 * 60 * 1000;
+  const check = (boardId: number, status: string, ageMs = 0) => ({
+    boardId,
+    status,
+    jobCount: null,
+    checkedAt: new Date(Date.now() - ageMs).toISOString(),
+  });
+  const checkRows = () => checkInsertMock.mock.calls.map((c: any[]) => c[0]);
+
+  test("dead board is not fetched and its entry carries reason dead", async () => {
+    vi.stubEnv("GREENHOUSE_SYNC_ENABLED", "true");
+    setup();
+    getLatestChecksMock.mockResolvedValue(new Map([[1, check(1, "dead")]]));
+    fetchBoardJobsMock.mockResolvedValue([]);
+
+    await runSync("cron");
+
+    expect(fetchBoardJobsMock).toHaveBeenCalledTimes(1);
+    expect(insertMock.mock.calls[0][0].source_results[1]).toEqual({
+      source: "greenhouse", board: "alpha", found: 0, inserted: 0, skipped: 0, failed: 0, reason: "dead",
+    });
+  });
+
+  test("empty board checked 13 days ago is not_due, 14 days ago is fetched", async () => {
+    vi.stubEnv("GREENHOUSE_SYNC_ENABLED", "true");
+    setup();
+    getLatestChecksMock.mockResolvedValue(
+      new Map([
+        [1, check(1, "empty", 13 * DAY)],
+        [2, check(2, "empty", 14 * DAY + 1000)],
+      ])
+    );
+    fetchBoardJobsMock.mockResolvedValue([]);
+
+    await runSync("cron");
+
+    expect(fetchBoardJobsMock).toHaveBeenCalledTimes(1);
+    expect(fetchBoardJobsMock.mock.calls[0][0]).toMatchObject({ identifier: "beta" });
+    const results = insertMock.mock.calls[0][0].source_results;
+    expect(results[1]).toMatchObject({ board: "alpha", reason: "not_due" });
+    expect(results[2].reason).toBeUndefined();
+  });
+
+  test("0 jobs writes an empty check, 3 jobs writes active with job_count 3", async () => {
+    vi.stubEnv("GREENHOUSE_SYNC_ENABLED", "true");
+    setup();
+    fetchBoardJobsMock.mockImplementation((board: { identifier: string }) =>
+      Promise.resolve(board.identifier === "alpha" ? [] : [job(1), job(2, "Software Engineer"), job(3)])
+    );
+
+    await runSync("cron");
+
+    expect(checkRows()).toEqual([
+      { board_id: 1, status: "empty", job_count: 0 },
+      { board_id: 2, status: "active", job_count: 3 },
+    ]);
+  });
+
+  test("404 writes not_found with null job_count and a failure", async () => {
+    vi.stubEnv("GREENHOUSE_SYNC_ENABLED", "true");
+    setup();
+    fetchBoardJobsMock.mockImplementation((board: { identifier: string }) =>
+      board.identifier === "alpha" ? Promise.reject(new BoardHttpError(404)) : Promise.resolve([])
+    );
+
+    const result = await runSync("cron");
+
+    expect(checkRows()[0]).toEqual({ board_id: 1, status: "not_found", job_count: null });
+    expect(result.failures).toEqual([{ messageId: "alpha", jobId: null, reason: "HTTP 404", source: "greenhouse", board: "alpha" }]);
+  });
+
+  test("HTTP 500 and a network error write no check and one failure each", async () => {
+    vi.stubEnv("GREENHOUSE_SYNC_ENABLED", "true");
+    setup();
+    fetchBoardJobsMock.mockImplementation((board: { identifier: string }) =>
+      Promise.reject(board.identifier === "alpha" ? new BoardHttpError(500) : new Error("TimeoutError"))
+    );
+
+    const result = await runSync("cron");
+
+    expect(checkInsertMock).not.toHaveBeenCalled();
+    expect(result.failures.map((f) => [f.board, f.reason])).toEqual([["alpha", "HTTP 500"], ["beta", "TimeoutError"]]);
+  });
+
+  test("a board with no check row is fetched and gets its first active row", async () => {
+    vi.stubEnv("GREENHOUSE_SYNC_ENABLED", "true");
+    setup();
+    getBoardsMock.mockResolvedValue([{ id: 9, portal: "greenhouse", identifier: "seed", displayName: "Seed" }]);
+    fetchBoardJobsMock.mockResolvedValue([job(1)]);
+
+    await runSync("cron");
+
+    expect(fetchBoardJobsMock).toHaveBeenCalledTimes(1);
+    expect(checkRows()).toEqual([{ board_id: 9, status: "active", job_count: 1 }]);
+  });
+
+  test("failed check insert: failure for that board, upsert still runs, SyncDatabaseError thrown", async () => {
+    vi.stubEnv("GREENHOUSE_SYNC_ENABLED", "true");
+    setup();
+    fetchBoardJobsMock.mockResolvedValue([job(1)]);
+    checkInsertMock.mockResolvedValueOnce({ error: { message: "checks down" } });
+
+    await expect(runSync("cron")).rejects.toBeInstanceOf(SyncDatabaseError);
+
+    expect(upsertMock).toHaveBeenCalledTimes(2);
+    expect(insertMock.mock.calls[0][0]).toMatchObject({
+      status: "error",
+      error: "checks down",
+      failures: [{ messageId: "alpha", reason: "checks down", source: "greenhouse", board: "alpha" }],
+    });
+  });
+
+  test("boards table read failure: failure, status error, nothing fetched, no fallback", async () => {
+    vi.stubEnv("GREENHOUSE_SYNC_ENABLED", "true");
+    setup();
+    getBoardsMock.mockRejectedValue(new Error("boards down"));
+
+    await expect(runSync("cron")).rejects.toBeInstanceOf(SyncDatabaseError);
+
+    expect(fetchBoardJobsMock).not.toHaveBeenCalled();
+    expect(insertMock.mock.calls[0][0]).toMatchObject({
+      status: "error",
+      error: "boards down",
+      failures: [{ messageId: "boards", jobId: null, reason: "boards down", source: "greenhouse" }],
+    });
+  });
+
+  test("checks read failure behaves the same", async () => {
+    vi.stubEnv("GREENHOUSE_SYNC_ENABLED", "true");
+    setup();
+    getLatestChecksMock.mockRejectedValue(new Error("checks read down"));
+
+    await expect(runSync("cron")).rejects.toBeInstanceOf(SyncDatabaseError);
+
+    expect(fetchBoardJobsMock).not.toHaveBeenCalled();
+    expect(insertMock.mock.calls[0][0]).toMatchObject({ status: "error", error: "checks read down" });
   });
 
   test("Gmail crash still runs Greenhouse, then records an error and rethrows", async () => {

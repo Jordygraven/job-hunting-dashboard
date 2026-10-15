@@ -1,4 +1,4 @@
-import type { GreenhouseBoard } from "../../config/greenhouseBoards";
+import type { Board } from "../boards/types";
 import type { GreenhouseJob } from "./normalize";
 
 const TIMEOUT_MS = 10_000;
@@ -11,7 +11,7 @@ export class BoardHttpError extends Error {
 
 // Error messages hold only a status code or an error name, never a response body.
 export async function fetchBoardJobs(
-  board: GreenhouseBoard,
+  board: Pick<Board, "identifier" | "displayName">,
   fetchImpl: typeof fetch = fetch
 ): Promise<GreenhouseJob[]> {
   const url = `https://boards-api.greenhouse.io/v1/boards/${encodeURIComponent(board.identifier)}/jobs`;

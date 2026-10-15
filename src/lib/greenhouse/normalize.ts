@@ -1,5 +1,5 @@
 import type { VacancyRow } from "../sync/vacancyRows";
-import type { GreenhouseBoard } from "../../config/greenhouseBoards";
+import type { Board } from "../boards/types";
 
 export interface GreenhouseJob {
   id?: unknown;
@@ -12,7 +12,7 @@ export type NormalizeResult =
   | { ok: true; row: VacancyRow }
   | { ok: false; jobId: string | null; reason: string };
 
-export function normalizeJob(job: GreenhouseJob, board: GreenhouseBoard, firstSeenAt: Date): NormalizeResult {
+export function normalizeJob(job: GreenhouseJob, board: Pick<Board, "identifier" | "displayName">, firstSeenAt: Date): NormalizeResult {
   const hasId = typeof job?.id === "number" || (typeof job?.id === "string" && job.id.trim() !== "");
   const title = typeof job?.title === "string" ? job.title.replace(/\s+/g, " ").trim() : "";
   const url = typeof job?.absolute_url === "string" ? job.absolute_url : "";

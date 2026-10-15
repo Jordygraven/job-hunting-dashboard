@@ -20,6 +20,8 @@ export interface SourceResult {
   inserted: number;
   skipped: number;
   failed: number;
+  // set only when the board was not fetched
+  reason?: "not_due" | "dead";
 }
 
 export interface SyncRunRecord {
