@@ -299,6 +299,21 @@ describe("runSync Greenhouse step", () => {
     expect(upsertMock).not.toHaveBeenCalled();
   });
 
+  test("logs a timing line for Gmail, each board and the total", async () => {
+    vi.stubEnv("GREENHOUSE_SYNC_ENABLED", "true");
+    setup();
+    fetchBoardJobsMock.mockResolvedValue([]);
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await runSync("cron");
+
+    const lines = log.mock.calls.map((c) => String(c[0]));
+    for (const label of ["gmail", "greenhouse:alpha", "greenhouse:beta", "total"]) {
+      expect(lines.some((l) => new RegExp(`^sync step ${label} \\d+ms$`).test(l))).toBe(true);
+    }
+    log.mockRestore();
+  });
+
   test("one board failing does not stop the other and is a soft failure", async () => {
     vi.stubEnv("GREENHOUSE_SYNC_ENABLED", "true");
     setup();

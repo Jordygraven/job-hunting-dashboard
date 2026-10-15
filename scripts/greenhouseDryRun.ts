@@ -8,6 +8,7 @@ const line = (r: { title: string; location: string | null; url: string }) =>
 
 async function main() {
   const now = new Date();
+  const start = Date.now();
   for (const board of GREENHOUSE_BOARDS) {
     console.log(`\n== ${board.displayName} (${board.identifier})`);
     try {
@@ -22,6 +23,7 @@ async function main() {
       console.log(`FAILED: ${error instanceof Error ? error.message : "unknown error"}`);
     }
   }
+  console.log(`\nelapsed: ${((Date.now() - start) / 1000).toFixed(1)}s`);
 }
 
 main();

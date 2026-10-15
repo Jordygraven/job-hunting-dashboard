@@ -2,6 +2,9 @@ import { runSync } from "@/lib/sync/runSync";
 import { SyncDatabaseError } from "@/lib/sync/upsertChunks";
 import { constantTimeEqual } from "@/lib/auth/basicAuth";
 
+// Hobby max with Fluid Compute; boards run one after another at up to 10 s each.
+export const maxDuration = 300;
+
 function isAuthorizedCronRequest(authHeader: string | null, expectedSecret: string | undefined): boolean {
   if (!expectedSecret) return false;
   if (!authHeader) return false;

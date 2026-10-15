@@ -4,7 +4,7 @@ import { afterEach, describe, expect, test } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { SyncsTable } from "./SyncsTable";
 import { LIST_NOT_AVAILABLE, type SourceGroup } from "@/lib/sync/getSyncVacancies";
-import type { SyncRunRecord } from "@/lib/sync/syncRunRecord";
+import type { SourceResult, SyncRunRecord } from "@/lib/sync/syncRunRecord";
 
 afterEach(cleanup);
 
@@ -152,5 +152,25 @@ describe("SyncsTable", () => {
     expect(within(ghBlock).getByText("Board fetch failed")).toBeInTheDocument();
     const liBlock = screen.getByText("LinkedIn").parentElement!;
     expect(within(liBlock).queryByText("Board fetch failed")).toBeNull();
+  });
+
+  test("zero-count entry with a reason key renders as plain zeros", () => {
+    const gh: SourceGroup = { source: "greenhouse", label: "X", inserted: 0, lines: [], more: 0 };
+    render(
+      <SyncsTable
+        runs={[
+          run({
+            sourceResults: [
+              // `reason` joins SourceResult in Task 5; jsonb already lets it through.
+              { source: "greenhouse", board: "x", found: 0, inserted: 0, skipped: 0, failed: 0, reason: "not_due" } as SourceResult,
+            ],
+          }),
+        ]}
+        vacancies={new Map([[1, [gh]]])}
+        openFirst
+      />
+    );
+    expect(screen.getByText("Greenhouse · X")).toBeInTheDocument();
+    expect(screen.getByText("found 0 · inserted 0 · skipped 0 · failed 0")).toBeInTheDocument();
   });
 });
