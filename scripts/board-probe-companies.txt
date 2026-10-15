@@ -1,0 +1,339 @@
+# Company list for scripts/board-probe.mjs
+# One company per line. To try several names for one company, separate them with |
+# (for example: Funding Societies | Modalku Group).
+# Lines starting with # are ignored, except "# source: <label>" which labels the lines below it.
+
+# source: dashboard
+Tec D Malaysia
+DKSH
+AIA Malaysia
+CelcomDigi
+Monee
+BJAK
+AEON Credit Service (M) Berhad
+Maxis
+Vertiv
+Lenovo
+Ryt Bank
+TDCX
+Zurich Insurance
+Doit
+The Access Group
+OCBC
+L'Oréal
+RHB Banking Group
+KHIND Malaysia
+Gen
+iSoftStone
+Kakitangan.com
+Carro
+WIZ.AI
+Hytech
+bp
+ADA
+Marsh
+BAT
+KOS International Talent Group
+EPOS
+Funding Societies | Modalku Group
+SGS
+Clarks
+Collabera
+Astro
+Aventra Group
+Century Software (Malaysia) Sdn Bhd
+First Circle
+Visa
+Mercedes-Benz Malaysia
+Global Fashion Group
+Verticurl
+Standard Chartered
+Digitai
+ASUS
+Endava
+Lee Kum Kee APAC
+Allianz Malaysia
+TENTACLE SSO SDN BHD
+Star Media Group Berhad
+U Mobile
+PolicyStreet
+QSR Brands
+RIAmetric
+Ditrolic Energy
+Aurora Talent
+Malaysia Airlines
+Oliver James
+HSBC
+DHL
+Merck Healthcare
+GXBank
+Mettler-Toledo International, Inc
+Getronics
+Azelis
+OSK Group
+Exclusive Networks
+CIMB
+
+# source: seed (crypto and web3)
+Binance
+OKX
+Bitget
+KuCoin
+Crypto.com
+Coinbase
+Kraken
+Gemini
+Circle
+Ripple
+Gate.io
+Bitpanda
+Luno
+Tokenize Technology
+Triple-A
+Coins.ph
+Bitkub
+HashKey
+Matrixport
+Amber Group
+Cobo
+Fireblocks
+Chainalysis
+Elliptic
+TRM Labs
+Bitstamp
+Bitfinex
+Deribit
+Bullish
+Animoca Brands
+Consensys
+Ledger
+MoonPay
+Alchemy
+Chainlink Labs
+Polygon Labs
+Aptos Labs
+Mysten Labs
+Ava Labs
+First Digital Trust
+Xendit
+
+# source: seed (payments and fintech)
+Wise
+Revolut
+Airwallex
+Nium
+Thunes
+Rapyd
+Checkout.com
+Adyen
+Stripe
+PayPal
+Razer
+Merchantrade
+MoneyMatch
+Boost
+Touch 'n Go
+Atome | Advance Intelligence Group
+Kredivo | FinAccel
+Akulaku
+ShopBack
+Aspire
+Validus
+StashAway
+Syfe
+Endowus
+YouTrip
+Wallex
+Payoneer
+Remitly
+Flywire
+Paysafe
+Worldline
+Nuvei
+dLocal
+Ebanx
+Pine Labs
+Razorpay
+Fave
+Setel
+Revenue Monster
+Soft Space
+Plaid
+Marqeta
+Mambu
+Thought Machine
+10x Banking
+Zeta
+
+# source: seed (regional tech, e-commerce, mobility)
+Grab
+GoTo
+Gojek
+Tokopedia
+Lazada
+Sea Limited
+Zalora
+Carousell
+Carsome
+PropertyGuru
+Agoda
+Trip.com
+Traveloka
+Klook
+Foodpanda
+Delivery Hero
+Bukalapak
+Rakuten
+Mercari
+Deliveroo
+Uber
+Lalamove
+Ninja Van
+Shopify
+Mudah
+Tiket.com
+Airbnb
+Pinterest
+DoorDash
+Instacart
+Bolt
+Wolt
+Ant International
+ByteDance
+TikTok
+Tencent
+Alibaba Cloud
+
+# source: seed (global software with APAC or remote roles)
+Cloudflare
+Datadog
+Elastic
+MongoDB
+Okta
+Twilio
+Zendesk
+Atlassian
+Canva
+Figma
+HubSpot
+Salesforce
+Dropbox
+GitLab
+Intercom
+Freshworks
+Zoho
+Miro
+Notion
+Airtable
+Asana
+Monday.com
+ClickUp
+Gong
+Amplitude
+Mixpanel
+Braze
+Iterable
+Sendbird
+Sprinklr
+Genesys
+Talkdesk
+Five9
+Qualtrics
+Medallia
+Workato
+UiPath
+Automation Anywhere
+Celonis
+Snowflake
+Databricks
+Confluent
+HashiCorp
+PagerDuty
+New Relic
+Splunk
+Dynatrace
+Sentry
+LaunchDarkly
+Postman
+Vercel
+Netlify
+Supabase
+Wix
+Squarespace
+Grammarly
+Duolingo
+Coursera
+Udemy
+Toast
+Gusto
+Rippling
+Deel
+Remote.com
+Oyster HR
+Papaya Global
+Multiplier
+Velocity Global
+HiBob
+Lattice
+Employment Hero
+Talenox
+Greenhouse Software
+Ashby
+Spotify
+Discord
+Reddit
+Roblox
+Unity
+Epic Games
+Riot Games
+Ubisoft
+Netflix
+
+# source: seed (AI)
+Anthropic
+OpenAI
+Cohere
+Mistral AI
+Scale AI
+Hugging Face
+Perplexity
+Glean
+Writer
+Synthesia
+ElevenLabs
+Runway
+Anysphere
+Replit
+Sierra
+Decagon
+Harvey
+Cognition
+Lovable
+Cresta
+Observe.AI
+Uniphore
+Yellow.ai
+Gupshup
+Kore.ai
+Moveworks
+Pand.ai
+
+# source: seed (Malaysia and Southeast Asia startups and scaleups)
+Mindvalley
+StoreHub
+Aerodyne Group
+Supahands
+Fusionex
+ViTrox
+Axiata
+Tapway
+SEEK
+Thoughtworks
+Slalom
+Globant
+EPAM
+Grid Dynamics
+Publicis Sapient
+Zühlke
+Valtech
+Nagarro
