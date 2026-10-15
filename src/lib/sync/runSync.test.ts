@@ -406,7 +406,32 @@ describe("runSync Greenhouse step", () => {
       status: "error",
       error: "duplicate key",
       messages: 0,
-      unique_jobs: 1,
+      unique_jobs: 2,
+    });
+  });
+
+  test("database error on the first board does not stop the second board", async () => {
+    vi.stubEnv("GREENHOUSE_SYNC_ENABLED", "true");
+    setup();
+    fetchBoardJobsMock.mockResolvedValue([job(1)]);
+    upsertMock
+      .mockReturnValueOnce({ select: () => Promise.resolve({ data: null, error: { message: "alpha db down" } }) })
+      .mockReturnValueOnce({ select: () => Promise.resolve({ data: [{ id: 1 }], error: null }) });
+
+    await expect(runSync("cron")).rejects.toBeInstanceOf(SyncDatabaseError);
+
+    expect(fetchBoardJobsMock).toHaveBeenCalledTimes(2);
+    expect(upsertMock).toHaveBeenCalledTimes(2);
+    expect(insertMock.mock.calls[0][0]).toMatchObject({
+      status: "error",
+      error: "alpha db down",
+      inserted: 1,
+      failures: [{ messageId: "alpha", reason: "alpha db down", source: "greenhouse", board: "alpha" }],
+      source_results: [
+        expect.objectContaining({ source: "linkedin" }),
+        expect.objectContaining({ board: "alpha", found: 1, inserted: 0, failed: 1 }),
+        expect.objectContaining({ board: "beta", found: 1, inserted: 1, failed: 0 }),
+      ],
     });
   });
 

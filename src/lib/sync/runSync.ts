@@ -201,6 +201,7 @@ async function syncGreenhouse(
   failures: SyncRunDetail[]
 ): Promise<void> {
   const firstSeenAt = new Date();
+  let databaseError: unknown;
 
   for (const board of GREENHOUSE_BOARDS) {
     await timed(`greenhouse:${board.identifier}`, async () => {
@@ -228,9 +229,17 @@ async function syncGreenhouse(
 
       const rows = uniqueVacancyRows(processed.passing);
       entry.found = rows.length;
-      await upsertRows(rows, runId, entry);
+      try {
+        await upsertRows(rows, runId, entry);
+      } catch (error) {
+        failures.push({ messageId: board.identifier, jobId: null, reason: reasonFor(error), ...detail });
+        databaseError ??= error;
+      }
     });
   }
+
+  // Rethrown after the loop so later boards still run and get their entries.
+  if (databaseError) throw databaseError;
 }
 
 export async function runSync(trigger: SyncTrigger): Promise<SyncResult> {
