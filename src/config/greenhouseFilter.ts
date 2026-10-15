@@ -46,4 +46,4 @@ export const LOCATION_PLACE_TERMS = [
 export const LOCATION_EXACT = "malaysia";
 
 // A location part with "remote" passes if it also contains any of these.
-export const LOCATION_REMOTE_REGION_TERMS = ["malaysia", "apac", "sea", "southeast asia"];
+export const LOCATION_REMOTE_REGION_TERMS = ["malaysia", "apac", "southeast asia"];

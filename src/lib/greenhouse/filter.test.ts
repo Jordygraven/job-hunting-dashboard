@@ -33,6 +33,7 @@ const cases: [string, string | null, boolean][] = [
   ["Product Manager", " Malaysia ; Dubai", true],
   ["Product Manager", "Malaysia Airlines Hub", false],
   ["Product Manager", "Seattle, WA; Remote - Seattle", false],
+  ["Product Manager", "Seattle, WA Remote", false],
   ["Product Manager", "Remote - Southeast Asia", true],
   ["Product Manager", "Remote", false],
   ["Product Manager", "", false],
