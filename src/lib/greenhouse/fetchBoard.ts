@@ -3,6 +3,12 @@ import type { GreenhouseJob } from "./normalize";
 
 const TIMEOUT_MS = 10_000;
 
+export class BoardHttpError extends Error {
+  constructor(readonly status: number) {
+    super(`HTTP ${status}`);
+  }
+}
+
 // Error messages hold only a status code or an error name, never a response body.
 export async function fetchBoardJobs(
   board: GreenhouseBoard,
@@ -16,7 +22,7 @@ export async function fetchBoardJobs(
   } catch (error) {
     throw new Error(error instanceof Error ? error.name : "fetch error");
   }
-  if (response.status !== 200) throw new Error(`HTTP ${response.status}`);
+  if (response.status !== 200) throw new BoardHttpError(response.status);
 
   let body: unknown;
   try {
