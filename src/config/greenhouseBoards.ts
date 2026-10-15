@@ -5,4 +5,6 @@ export interface GreenhouseBoard {
 
 export const GREENHOUSE_BOARDS: GreenhouseBoard[] = [
   { identifier: "bybit", displayName: "Bybit" },
+  { identifier: "binance", displayName: "Binance" },
+  { identifier: "xendit", displayName: "Xendit" },
 ];
