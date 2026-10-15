@@ -7,8 +7,12 @@ import { toSyncWarnings } from "@/lib/sync/syncWarnings";
 import type { SourceResult, SyncRunDetail } from "@/lib/sync/syncRunRecord";
 import { SyncDatabaseError, upsertInChunks } from "@/lib/sync/upsertChunks";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
-import { GREENHOUSE_BOARDS } from "@/config/greenhouseBoards";
-import { fetchBoardJobs } from "@/lib/greenhouse/fetchBoard";
+import { getBoards } from "@/lib/boards/getBoards";
+import { getLatestChecks } from "@/lib/boards/getLatestChecks";
+import { isDue } from "@/lib/boards/isDue";
+import { recordBoardCheck } from "@/lib/boards/recordBoardCheck";
+import type { Board, CheckStatus } from "@/lib/boards/types";
+import { BoardHttpError, fetchBoardJobs } from "@/lib/greenhouse/fetchBoard";
 import { processBoard } from "@/lib/greenhouse/processBoard";
 
 export type SyncTrigger = "cron" | "manual";
@@ -38,6 +42,15 @@ function reasonFor(error: unknown): string {
     return typeof error.message === "string" ? error.message : "unknown error";
   }
   return "unknown error";
+}
+
+async function timed<T>(label: string, fn: () => Promise<T>): Promise<T> {
+  const start = Date.now();
+  try {
+    return await fn();
+  } finally {
+    console.log(`sync step ${label} ${Date.now() - start}ms`);
+  }
 }
 
 async function recordSyncRun(args: {
@@ -192,34 +205,81 @@ async function syncGreenhouse(
   failures: SyncRunDetail[]
 ): Promise<void> {
   const firstSeenAt = new Date();
+  const supabase = getSupabaseServerClient();
+  let databaseError: unknown;
 
-  for (const board of GREENHOUSE_BOARDS) {
-    const entry: SourceResult = {
-      source: "greenhouse",
-      board: board.identifier,
-      found: 0,
-      inserted: 0,
-      skipped: 0,
-      failed: 0,
-    };
-    results.push(entry);
-    const detail = { source: "greenhouse" as const, board: board.identifier };
-
-    let processed;
-    try {
-      processed = processBoard(await fetchBoardJobs(board), board, firstSeenAt);
-    } catch (error) {
-      failures.push({ messageId: board.identifier, jobId: null, reason: reasonFor(error), ...detail });
-      continue;
-    }
-    for (const invalid of processed.invalid) {
-      failures.push({ messageId: board.identifier, jobId: invalid.jobId, reason: invalid.reason, ...detail });
-    }
-
-    const rows = uniqueVacancyRows(processed.passing);
-    entry.found = rows.length;
-    await upsertRows(rows, runId, entry);
+  let boards: Board[];
+  let checks: Awaited<ReturnType<typeof getLatestChecks>>;
+  try {
+    [boards, checks] = await Promise.all([getBoards(supabase, "greenhouse"), getLatestChecks(supabase)]);
+  } catch (error) {
+    failures.push({ messageId: "boards", jobId: null, reason: reasonFor(error), source: "greenhouse" });
+    throw new SyncDatabaseError(reasonFor(error));
   }
+
+  for (const board of boards) {
+    await timed(`greenhouse:${board.identifier}`, async () => {
+      const entry: SourceResult = {
+        source: "greenhouse",
+        board: board.identifier,
+        found: 0,
+        inserted: 0,
+        skipped: 0,
+        failed: 0,
+      };
+      results.push(entry);
+      const detail = { source: "greenhouse" as const, board: board.identifier };
+
+      const due = isDue(checks.get(board.id), firstSeenAt);
+      if (due !== "due") {
+        entry.reason = due;
+        return;
+      }
+
+      // A failed check insert is a database problem but must not stop the board's upsert.
+      const recordCheck = async (status: CheckStatus, jobCount: number | null) => {
+        try {
+          await recordBoardCheck(supabase, { boardId: board.id, status, jobCount });
+        } catch (error) {
+          failures.push({ messageId: board.identifier, jobId: null, reason: reasonFor(error), ...detail });
+          databaseError ??= error;
+        }
+      };
+
+      let jobs;
+      try {
+        jobs = await fetchBoardJobs(board);
+      } catch (error) {
+        failures.push({ messageId: board.identifier, jobId: null, reason: reasonFor(error), ...detail });
+        if (error instanceof BoardHttpError && error.status === 404) await recordCheck("not_found", null);
+        return;
+      }
+      await recordCheck(jobs.length > 0 ? "active" : "empty", jobs.length);
+
+      let processed;
+      try {
+        processed = processBoard(jobs, board, firstSeenAt);
+      } catch (error) {
+        failures.push({ messageId: board.identifier, jobId: null, reason: reasonFor(error), ...detail });
+        return;
+      }
+      for (const invalid of processed.invalid) {
+        failures.push({ messageId: board.identifier, jobId: invalid.jobId, reason: invalid.reason, ...detail });
+      }
+
+      const rows = uniqueVacancyRows(processed.passing);
+      entry.found = rows.length;
+      try {
+        await upsertRows(rows, runId, entry);
+      } catch (error) {
+        failures.push({ messageId: board.identifier, jobId: null, reason: reasonFor(error), ...detail });
+        databaseError ??= error;
+      }
+    });
+  }
+
+  // Rethrown after the loop so later boards still run and get their entries.
+  if (databaseError) throw databaseError;
 }
 
 export async function runSync(trigger: SyncTrigger): Promise<SyncResult> {
@@ -234,7 +294,9 @@ export async function runSync(trigger: SyncTrigger): Promise<SyncResult> {
   const problems: unknown[] = [];
 
   try {
-    await syncGmail(counts, runId, gmailEntry, failures, parserFailures, warningDetails);
+    await timed("gmail", () =>
+      syncGmail(counts, runId, gmailEntry, failures, parserFailures, warningDetails)
+    );
   } catch (error) {
     problems.push(error);
     // A database error is already reported through the run's `error` field.
@@ -299,6 +361,8 @@ export async function runSync(trigger: SyncTrigger): Promise<SyncResult> {
     warningDetails,
     error: problems.length > 0 ? problems.map(reasonFor).join("\n") : null,
   });
+
+  console.log(`sync step total ${Date.now() - startedAt.getTime()}ms`);
 
   if (problems.length > 0) {
     throw problems.find((p) => p instanceof SyncDatabaseError) ?? problems[0];

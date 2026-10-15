@@ -1,5 +1,5 @@
 import type { VacancyRow } from "../sync/vacancyRows";
-import type { GreenhouseBoard } from "../../config/greenhouseBoards";
+import type { Board } from "../boards/types";
 import { passesFilter, passesLocation, passesTitle } from "./filter";
 import { normalizeJob, type GreenhouseJob } from "./normalize";
 
@@ -11,7 +11,7 @@ export interface ProcessedBoard {
   invalid: { jobId: string | null; reason: string }[];
 }
 
-export function processBoard(jobs: GreenhouseJob[], board: GreenhouseBoard, firstSeenAt: Date): ProcessedBoard {
+export function processBoard(jobs: GreenhouseJob[], board: Pick<Board, "identifier" | "displayName">, firstSeenAt: Date): ProcessedBoard {
   const result: ProcessedBoard = { total: jobs.length, passing: [], locationRejected: [], invalid: [] };
   for (const job of jobs) {
     const normalized = normalizeJob(job, board, firstSeenAt);

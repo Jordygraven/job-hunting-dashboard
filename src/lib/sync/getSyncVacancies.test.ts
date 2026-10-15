@@ -1,5 +1,4 @@
 import { describe, expect, test, vi } from "vitest";
-import { GREENHOUSE_BOARDS } from "@/config/greenhouseBoards";
 
 vi.mock("@/lib/supabase/server", () => ({ getSupabaseServerClient: () => ({}) }));
 
@@ -13,10 +12,38 @@ const run = (over: Partial<SyncRunRecord>) =>
   ({ id: 1, runId: "r1", sourceResults: [], ...over }) as SyncRunRecord;
 const line = { title: "T", company: "C", url: "u" };
 
-function fakeClient() {
+const BOARDS = [
+  { id: 1, portal: "greenhouse", identifier: "bybit", display_name: "Bybit" },
+  { id: 2, portal: "greenhouse", identifier: "acme-gh", display_name: "Acme" },
+  { id: 3, portal: "lever", identifier: "acme-lv", display_name: "Acme" },
+];
+
+// Boards read: one page, then empty (fetchAllRows stops on an empty page).
+function boardsBuilder(boardEq: [string, string][], error: unknown, pages: { n: number }) {
+  let portal = "";
+  const b: any = {
+    select: () => b,
+    eq: (col: string, val: string) => (boardEq.push([col, val]), (portal = val), b),
+    order: () => b,
+    limit: () => b,
+    gt: () => b,
+    then: (resolve: any, reject: any) =>
+      Promise.resolve(
+        error
+          ? { data: null, error }
+          : { data: pages.n++ === 0 ? BOARDS.filter((r) => r.portal === portal) : [], error: null }
+      ).then(resolve, reject),
+  };
+  return b;
+}
+
+function fakeClient(boardsError: unknown = null) {
   const calls: { cols: string; eq: [string, string][]; order?: unknown; limit?: number }[] = [];
+  const boardEq: [string, string][] = [];
+  const pages = { n: 0 };
   const client = {
     from: (table: string) => {
+      if (table === "boards") return boardsBuilder(boardEq, boardsError, pages);
       expect(table).toBe("vacancies");
       const call: (typeof calls)[number] = { cols: "", eq: [] };
       calls.push(call);
@@ -29,7 +56,7 @@ function fakeClient() {
       return q;
     },
   };
-  return { client: client as any, calls };
+  return { client: client as any, calls, boardEq };
 }
 
 describe("getSyncVacancies", () => {
@@ -52,6 +79,26 @@ describe("getSyncVacancies", () => {
     });
     expect(calls[1].eq).toContainEqual(["company", "Bybit"]);
     expect(groups[2]).toMatchObject({ label: "gone", inserted: 7, lines: null, more: 7 });
+  });
+  test("two portals share display name Acme: lookup and query use greenhouse only", async () => {
+    const { client, calls, boardEq } = fakeClient();
+    const r = run({
+      sourceResults: [
+        entry({ source: "greenhouse", board: "acme-gh", inserted: 1 }),
+        entry({ source: "greenhouse", board: "acme-lv", inserted: 1 }),
+      ],
+    });
+    const groups = (await getSyncVacancies([r], client)).get(1) as any[];
+    expect(boardEq.length).toBeGreaterThan(0);
+    expect(boardEq.every(([c, v]) => c === "portal" && v === "greenhouse")).toBe(true);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].eq).toEqual([["sync_run_id", "r1"], ["source", "greenhouse"], ["company", "Acme"]]);
+    expect(groups[0]).toMatchObject({ label: "Acme", lines: [line] });
+    expect(groups[1]).toMatchObject({ label: "acme-lv", lines: null });
+  });
+  test("failed boards read throws", async () => {
+    const { client } = fakeClient({ message: "boom" });
+    await expect(getSyncVacancies([run({ sourceResults: [entry({})] })], client)).rejects.toThrow();
   });
   test("inserted 0: no query, empty list", async () => {
     const { client, calls } = fakeClient();
@@ -97,22 +144,15 @@ describe("toSourceGroups", () => {
   const lines = (n: number) => Array.from({ length: n }, () => line);
   test("more = inserted - shown, never below 0", () => {
     const r = run({ sourceResults: [entry({ inserted: 130 }), entry({ inserted: 40 }), entry({ inserted: 2 })] });
-    const g = toSourceGroups(r, [lines(100), lines(40), lines(3)]) as any[];
+    const g = toSourceGroups(r, [lines(100), lines(40), lines(3)], new Map()) as any[];
     expect(g.map((x) => x.more)).toEqual([30, 0, 0]);
   });
   test("known board shows display name", () => {
     const r = run({ sourceResults: [entry({ source: "greenhouse", board: "bybit" })] });
-    expect((toSourceGroups(r, [[]]) as any[])[0].label).toBe("Bybit");
+    expect((toSourceGroups(r, [[]], new Map([["bybit", "Bybit"]])) as any[])[0].label).toBe("Bybit");
   });
   test("marker when list not available", () => {
-    expect(toSourceGroups(run({ runId: null }), [])).toBe(LIST_NOT_AVAILABLE);
-    expect(toSourceGroups(run({ sourceResults: null }), [])).toBe(LIST_NOT_AVAILABLE);
-  });
-});
-
-describe("greenhouseBoards config", () => {
-  test("display names are unique", () => {
-    const names = GREENHOUSE_BOARDS.map((b) => b.displayName);
-    expect(new Set(names).size).toBe(names.length);
+    expect(toSourceGroups(run({ runId: null }), [], new Map())).toBe(LIST_NOT_AVAILABLE);
+    expect(toSourceGroups(run({ sourceResults: null }), [], new Map())).toBe(LIST_NOT_AVAILABLE);
   });
 });

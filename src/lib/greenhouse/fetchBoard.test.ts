@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
-import { fetchBoardJobs } from "./fetchBoard";
+import { BoardHttpError, fetchBoardJobs } from "./fetchBoard";
 
 const board = { identifier: "bybit", displayName: "Bybit" };
 const respond = (status: number, body: unknown) =>
@@ -16,8 +16,17 @@ describe("fetchBoardJobs", () => {
     await expect(fetchBoardJobs(board, respond(503, "secret body"))).rejects.toThrow(/^HTTP 503$/);
   });
 
+  test.each([404, 500])("HTTP %i throws BoardHttpError carrying the status", async (status) => {
+    const error = await fetchBoardJobs(board, respond(status, "x")).catch((e) => e);
+    expect(error).toBeInstanceOf(BoardHttpError);
+    expect(error.status).toBe(status);
+    expect(error.message).toBe(`HTTP ${status}`);
+  });
+
   test("bad JSON throws", async () => {
     await expect(fetchBoardJobs(board, respond(200, "<html>"))).rejects.toThrow("invalid JSON");
+    const error = await fetchBoardJobs(board, respond(200, "<html>")).catch((e) => e);
+    expect(error).not.toBeInstanceOf(BoardHttpError);
   });
 
   test("missing jobs array throws", async () => {
@@ -27,5 +36,7 @@ describe("fetchBoardJobs", () => {
   test("network error throws the error name only", async () => {
     const f = vi.fn().mockRejectedValue(new TypeError("fetch failed: secret detail"));
     await expect(fetchBoardJobs(board, f)).rejects.toThrow(/^TypeError$/);
+    const error = await fetchBoardJobs(board, f).catch((e) => e);
+    expect(error).not.toBeInstanceOf(BoardHttpError);
   });
 });

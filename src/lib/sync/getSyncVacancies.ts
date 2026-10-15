@@ -1,4 +1,4 @@
-import { GREENHOUSE_BOARDS } from "@/config/greenhouseBoards";
+import { getBoards } from "@/lib/boards/getBoards";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type { SourceResult, SyncRunRecord } from "./syncRunRecord";
 
@@ -16,25 +16,29 @@ export interface SourceGroup {
   // Display name for a known Greenhouse board, the stored identifier otherwise.
   label: string;
   inserted: number;
-  // null: no list (board not in config, so no query ran).
+  // null: no list (board not in the boards table, so no query ran).
   lines: VacancyLine[] | null;
   more: number;
 }
 
 type Client = ReturnType<typeof getSupabaseServerClient>;
 
+// Greenhouse identifier -> display name.
+type Names = Map<string, string>;
+
 // Stored `board` is the identifier; vacancies.company holds the display name.
-function displayNameFor(entry: SourceResult): string | null {
-  if (entry.source !== "greenhouse") return null;
-  return GREENHOUSE_BOARDS.find((b) => b.identifier === entry.board)?.displayName ?? null;
+function displayNameFor(entry: SourceResult, names: Names): string | null {
+  if (entry.source !== "greenhouse" || !entry.board) return null;
+  return names.get(entry.board) ?? null;
 }
 
 async function fetchEntryLines(
   client: Client,
   runId: string,
-  entry: SourceResult
+  entry: SourceResult,
+  names: Names
 ): Promise<VacancyLine[] | null> {
-  const name = displayNameFor(entry);
+  const name = displayNameFor(entry, names);
   if (entry.source === "greenhouse" && !name) return null;
   if (entry.inserted === 0) return [];
 
@@ -57,12 +61,14 @@ export async function getSyncVacancies(
   client: Client = getSupabaseServerClient()
 ): Promise<Map<number, SourceGroup[] | typeof LIST_NOT_AVAILABLE>> {
   const out = new Map<number, SourceGroup[] | typeof LIST_NOT_AVAILABLE>();
+  // Identifiers are only unique per portal, so read greenhouse boards only.
+  const names: Names = new Map((await getBoards(client, "greenhouse")).map((b) => [b.identifier, b.displayName]));
   await Promise.all(
     runs.map(async (run) => {
       const { runId, sourceResults } = run;
       if (!runId || !sourceResults) return out.set(run.id, LIST_NOT_AVAILABLE);
-      const lists = await Promise.all(sourceResults.map((e) => fetchEntryLines(client, runId, e)));
-      out.set(run.id, toSourceGroups(run, lists));
+      const lists = await Promise.all(sourceResults.map((e) => fetchEntryLines(client, runId, e, names)));
+      out.set(run.id, toSourceGroups(run, lists, names));
     })
   );
   return out;
@@ -71,14 +77,15 @@ export async function getSyncVacancies(
 // `lists[i]` belongs to `run.sourceResults[i]`.
 export function toSourceGroups(
   run: Pick<SyncRunRecord, "runId" | "sourceResults">,
-  lists: (VacancyLine[] | null)[]
+  lists: (VacancyLine[] | null)[],
+  names: Names
 ): SourceGroup[] | typeof LIST_NOT_AVAILABLE {
   if (!run.runId || !run.sourceResults) return LIST_NOT_AVAILABLE;
   return run.sourceResults.map((entry, i) => {
     const lines = lists[i] ?? null;
     return {
       source: entry.source,
-      label: displayNameFor(entry) ?? entry.board ?? "LinkedIn",
+      label: displayNameFor(entry, names) ?? entry.board ?? "LinkedIn",
       inserted: entry.inserted,
       lines,
       more: Math.max(entry.inserted - (lines?.length ?? 0), 0),

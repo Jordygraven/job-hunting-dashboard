@@ -36,6 +36,5 @@
 ## Epic 11 follow-ups
 
 - Epic 11b: 'duplicate' ignore reason and cross-source dedup.
-- Unique displayName per Greenhouse board (test exists). Add vacancies.board if renames become common.
+- Unique displayName per Greenhouse board. Add vacancies.board if renames become common.
 - greenhouseDryRun exit code not covered by a test.
-- A Greenhouse database error stops the board loop, so later boards get no source_results entry. Revisit when a second board goes live.
