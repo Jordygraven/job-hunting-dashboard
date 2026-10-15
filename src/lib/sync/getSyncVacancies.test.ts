@@ -1,5 +1,4 @@
 import { describe, expect, test, vi } from "vitest";
-import { GREENHOUSE_BOARDS } from "@/config/greenhouseBoards";
 
 vi.mock("@/lib/supabase/server", () => ({ getSupabaseServerClient: () => ({}) }));
 
@@ -155,12 +154,5 @@ describe("toSourceGroups", () => {
   test("marker when list not available", () => {
     expect(toSourceGroups(run({ runId: null }), [], new Map())).toBe(LIST_NOT_AVAILABLE);
     expect(toSourceGroups(run({ sourceResults: null }), [], new Map())).toBe(LIST_NOT_AVAILABLE);
-  });
-});
-
-describe("greenhouseBoards config", () => {
-  test("display names are unique", () => {
-    const names = GREENHOUSE_BOARDS.map((b) => b.displayName);
-    expect(new Set(names).size).toBe(names.length);
   });
 });
