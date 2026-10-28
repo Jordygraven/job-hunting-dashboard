@@ -2,7 +2,7 @@ import "server-only";
 
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { getKlDateString, isDateNotInFutureKl, isValidDateString } from "@/lib/format/kualaLumpurDate";
-import { deriveAutoDraft, derivePilot, deriveStarred, deriveVacancyStatus } from "./deriveVacancyStatus";
+import { deriveAutoDraft, deriveDrafted, derivePilot, deriveStarred, deriveVacancyStatus } from "./deriveVacancyStatus";
 import { mapVacancyActionRow } from "./mapVacancyActionRow";
 import type { IgnoreReason } from "./types";
 import {
@@ -177,6 +177,9 @@ export async function writeVacancyAction(
   }
   if (input.intent === "unstar" && !starred) {
     return { ok: false, error: "Not starred." };
+  }
+  if ((input.intent === "autoDraft" || input.intent === "clearAutoDraft") && deriveDrafted(rows)) {
+    return { ok: false, error: "Already drafted." };
   }
   if (input.intent === "autoDraft" && autoDraft) {
     return { ok: false, error: "Already marked for auto-draft." };

@@ -269,6 +269,21 @@ describe("writeVacancyAction guards", () => {
     expect(insertMock).not.toHaveBeenCalled();
   });
 
+  test.each([
+    ["autoDraft", []],
+    ["autoDraft", ["automated_draft"]],
+    ["clearAutoDraft", []],
+    ["clearAutoDraft", ["automated_draft"]],
+  ] as const)("%s is rejected as drafted when a done row exists (prior rows %j)", async (intent, prior) => {
+    const rows = [
+      ...prior.map((action, i) => actionRow({ id: i + 1, action })),
+      actionRow({ id: 10, action: "automated_draft_done" }),
+    ];
+    mockTables({ actionRows: { data: rows, error: null } });
+    expect(await writeVacancyAction({ intent, vacancyId: 1 })).toEqual({ ok: false, error: "Already drafted." });
+    expect(insertMock).not.toHaveBeenCalled();
+  });
+
   test("auto-draft and pilot are allowed on any status", async () => {
     mockTables({ actionRows: { data: [actionRow({ action: "ignored", ignore_reason: "other" })], error: null } });
     expect(await writeVacancyAction({ intent: "autoDraft", vacancyId: 1 })).toEqual({ ok: true });

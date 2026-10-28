@@ -102,3 +102,17 @@ export async function unstar(vacancyId: number): Promise<WriteVacancyActionResul
   }
   return result;
 }
+
+export async function toggleAutoDraft(
+  vacancyId: number,
+  marked: boolean
+): Promise<WriteVacancyActionResult> {
+  const result = await writeVacancyAction({
+    intent: marked ? "clearAutoDraft" : "autoDraft",
+    vacancyId,
+  });
+  if (result.ok) {
+    revalidatePath("/");
+  }
+  return result;
+}
