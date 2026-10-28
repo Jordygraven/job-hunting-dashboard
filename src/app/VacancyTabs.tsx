@@ -12,6 +12,7 @@ const TABS: { view: VacancyTabView; label: string }[] = [
   { view: "success", label: "Success" },
   { view: "rejected", label: "Rejected" },
   { view: "ignored", label: "Ignored" },
+  { view: "autodraft", label: "Auto-draft" },
 ];
 
 const REASON_FILTERS: { value: IgnoreReason | "none" | null; label: string }[] = [

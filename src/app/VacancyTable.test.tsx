@@ -28,6 +28,7 @@ function row(overrides: Partial<VacancyTabRow> = {}): VacancyTabRow {
     autoDraft: false,
     pilot: false,
     drafted: false,
+    queued: false,
     ...overrides,
   };
 }

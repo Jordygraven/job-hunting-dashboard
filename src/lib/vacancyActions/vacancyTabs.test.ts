@@ -27,7 +27,7 @@ function vacancy(overrides: Partial<Vacancy> = {}): Vacancy {
   };
 }
 
-const NO_AUTOMATION = { autoDraft: false, pilot: false, drafted: false };
+const NO_AUTOMATION = { autoDraft: false, pilot: false, drafted: false, queued: false };
 
 function tabRow(overrides: Partial<VacancyTabRow> = {}): VacancyTabRow {
   return {
@@ -46,6 +46,7 @@ function tabRow(overrides: Partial<VacancyTabRow> = {}): VacancyTabRow {
     autoDraft: false,
     pilot: false,
     drafted: false,
+    queued: false,
     ...overrides,
   };
 }
@@ -63,6 +64,7 @@ describe("resolveView", () => {
     expect(resolveView("success")).toBe("success");
     expect(resolveView("rejected")).toBe("rejected");
     expect(resolveView("ignored")).toBe("ignored");
+    expect(resolveView("autodraft")).toBe("autodraft");
   });
 
   test("falls back to todo for an unknown value", () => {
@@ -185,6 +187,16 @@ describe("selectRowsForView", () => {
     expect(selectRowsForView(rows, "interest", null).map((r) => r.id)).toEqual([1, 2]);
   });
 
+  test("autodraft returns only queued rows, across every status", () => {
+    const queue = [
+      tabRow({ id: 1, status: "todo", queued: true }),
+      tabRow({ id: 2, status: "ignored", queued: true }),
+      tabRow({ id: 3, status: "todo", autoDraft: true, queued: false }),
+      tabRow({ id: 4, status: "todo", autoDraft: true, drafted: true, queued: false }),
+    ];
+    expect(selectRowsForView(queue, "autodraft", null).map((r) => r.id)).toEqual([1, 2]);
+  });
+
   test("a reason filter on the ignored tab narrows further", () => {
     expect(selectRowsForView(rows, "ignored", "language").map((r) => r.id)).toEqual([3]);
   });
@@ -216,6 +228,7 @@ describe("countByView", () => {
       ignored: 1,
       all: 6,
       interest: 0,
+      autodraft: 0,
     });
   });
 
@@ -231,6 +244,17 @@ describe("countByView", () => {
     expect(counts.todo + counts.applied + counts.success + counts.rejected + counts.ignored).toBe(counts.all);
   });
 
+  test("autodraft counts queued rows across every status and is not folded into all", () => {
+    const rows = [
+      tabRow({ id: 1, status: "todo", queued: true }),
+      tabRow({ id: 2, status: "ignored", queued: true }),
+      tabRow({ id: 3, status: "todo", autoDraft: true, drafted: true }),
+    ];
+    const counts = countByView(rows);
+    expect(counts.autodraft).toBe(2);
+    expect(counts.all).toBe(3);
+  });
+
   test("all-zero counts for an empty vacancy list", () => {
     expect(countByView([])).toEqual({
       todo: 0,
@@ -240,6 +264,7 @@ describe("countByView", () => {
       ignored: 0,
       all: 0,
       interest: 0,
+      autodraft: 0,
     });
   });
 });

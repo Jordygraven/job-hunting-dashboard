@@ -66,13 +66,14 @@ describe("getVacancyFlags", () => {
 
     const flags = await getVacancyFlags();
 
-    expect(flags.get(10)).toEqual({ status: { status: "todo" }, starred: false, autoDraft: false, pilot: false, drafted: false });
+    expect(flags.get(10)).toEqual({ status: { status: "todo" }, starred: false, autoDraft: false, pilot: false, drafted: false, queued: false });
     expect(flags.get(20)).toEqual({
       status: { status: "ignored", reason: "language", date: "2026-10-02" },
       starred: false,
       autoDraft: false,
       pilot: false,
       drafted: false,
+      queued: false,
     });
     expect(flags.size).toBe(2);
     expect(orderMock).toHaveBeenCalledWith("id", { ascending: false });
@@ -99,6 +100,7 @@ describe("getVacancyFlags", () => {
       autoDraft: false,
       pilot: false,
       drafted: false,
+      queued: false,
     });
   });
 
@@ -120,7 +122,7 @@ describe("getVacancyFlags", () => {
     const flags = await getVacancyFlags();
 
     expect(flags.get(10)).toMatchObject({ autoDraft: true, pilot: true, drafted: true });
-    expect(flags.get(20)).toMatchObject({ autoDraft: false, pilot: false, drafted: false });
+    expect(flags.get(20)).toMatchObject({ autoDraft: false, pilot: false, drafted: false, queued: false });
   });
 
   test("a truncated older row can't change the result — pagination collects every row, not just the first seen", async () => {
@@ -144,6 +146,7 @@ describe("getVacancyFlags", () => {
       autoDraft: false,
       pilot: false,
       drafted: false,
+      queued: false,
     });
     expect(flags.size).toBe(1);
   });
@@ -178,6 +181,7 @@ describe("getVacancyFlags", () => {
       autoDraft: false,
       pilot: false,
       drafted: false,
+      queued: false,
     });
     expect(limitMock).toHaveBeenCalledTimes(3);
     expect(ltMock).toHaveBeenCalledTimes(2);

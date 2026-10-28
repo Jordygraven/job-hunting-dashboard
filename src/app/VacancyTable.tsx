@@ -16,6 +16,7 @@ const EMPTY_STATE_TEXT: Record<VacancyTabView, string> = {
   success: "No successful vacancies yet.",
   rejected: "No rejected vacancies yet.",
   ignored: "No ignored vacancies yet.",
+  autodraft: "Nothing queued for auto-draft.",
 };
 
 const STATUS_PILL_CLASS: Record<VacancyTabRow["status"], string> = {

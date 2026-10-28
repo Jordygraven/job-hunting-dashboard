@@ -72,6 +72,7 @@ export const COLUMNS_BY_VIEW: Record<VacancyTabView, readonly SortableColumnKey[
   rejected: ["title", "company", "location", "firstSeenAt", "appliedOn", "outcomeOn"],
   ignored: ["title", "company", "location", "firstSeenAt", "ignoredOn", "ignoreReason"],
   all: ["title", "company", "location", "firstSeenAt", "status"],
+  autodraft: ["title", "company", "location", "firstSeenAt", "status"],
 };
 
 export function columnLabel(column: SortableColumnKey): string {

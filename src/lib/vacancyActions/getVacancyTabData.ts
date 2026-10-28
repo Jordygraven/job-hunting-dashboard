@@ -65,11 +65,13 @@ export async function getVacancyTabData(params: VacancyTabSearchParams): Promise
       autoDraft: false,
       pilot: false,
       drafted: false,
+      queued: false,
     };
     return buildVacancyTabRow(vacancy, flag.status, flag.starred, {
       autoDraft: flag.autoDraft,
       pilot: flag.pilot,
       drafted: flag.drafted,
+      queued: flag.queued,
     });
   });
 

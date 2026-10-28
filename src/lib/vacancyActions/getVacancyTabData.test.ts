@@ -23,7 +23,7 @@ const VACANCIES = [
   { id: 3, title: "C", company: "Co C", location: "Penang", url: "https://x/3", firstSeenAt: "2026-10-01T00:00:00.000Z" },
 ];
 
-const EMPTY_COUNTS = { todo: 0, applied: 0, success: 0, rejected: 0, ignored: 0, all: 0, interest: 0 };
+const EMPTY_COUNTS = { todo: 0, applied: 0, success: 0, rejected: 0, ignored: 0, all: 0, interest: 0, autodraft: 0 };
 
 describe("getVacancyTabData", () => {
   test("combines vacancies with statuses, defaults to the todo tab, keeps newest-first order", async () => {
