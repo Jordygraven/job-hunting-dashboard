@@ -14,7 +14,7 @@ vi.mock("@/lib/sync/runSync", () => ({
   runSync: (...args: any[]) => runSyncMock(...args),
 }));
 
-import { apply, editAppliedDate, ignore, runManualSync, toggleAutoDraft, undo } from "./actions";
+import { apply, editAppliedDate, ignore, runManualSync, toggleAutoDraft, togglePilot, undo } from "./actions";
 
 beforeEach(() => {
   writeVacancyActionMock = vi.fn();
@@ -108,6 +108,26 @@ describe("toggleAutoDraft", () => {
     writeVacancyActionMock.mockResolvedValue({ ok: false, error: "Already drafted." });
     const result = await toggleAutoDraft(4, false);
     expect(result).toEqual({ ok: false, error: "Already drafted." });
+    expect(revalidatePathMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("togglePilot", () => {
+  test.each([
+    [false, "pilot"],
+    [true, "clearPilot"],
+  ])("marked=%s sends intent %s and revalidates on success", async (marked, intent) => {
+    writeVacancyActionMock.mockResolvedValue({ ok: true });
+    const result = await togglePilot(4, marked);
+    expect(writeVacancyActionMock).toHaveBeenCalledWith({ intent, vacancyId: 4 });
+    expect(result).toEqual({ ok: true });
+    expect(revalidatePathMock).toHaveBeenCalledWith("/");
+  });
+
+  test("returns the error as-is and does not revalidate on failure", async () => {
+    writeVacancyActionMock.mockResolvedValue({ ok: false, error: "Already marked for pilot." });
+    const result = await togglePilot(4, false);
+    expect(result).toEqual({ ok: false, error: "Already marked for pilot." });
     expect(revalidatePathMock).not.toHaveBeenCalled();
   });
 });

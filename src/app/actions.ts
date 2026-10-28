@@ -116,3 +116,17 @@ export async function toggleAutoDraft(
   }
   return result;
 }
+
+export async function togglePilot(
+  vacancyId: number,
+  marked: boolean
+): Promise<WriteVacancyActionResult> {
+  const result = await writeVacancyAction({
+    intent: marked ? "clearPilot" : "pilot",
+    vacancyId,
+  });
+  if (result.ok) {
+    revalidatePath("/");
+  }
+  return result;
+}
