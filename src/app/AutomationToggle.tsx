@@ -88,7 +88,28 @@ function BoltGlyph({ filled }: { filled: boolean }) {
   );
 }
 
-export function AutoDraftToggle({ vacancyId, marked }: { vacancyId: number; marked: boolean }) {
+export function AutoDraftToggle({
+  vacancyId,
+  marked,
+  drafted = false,
+}: {
+  vacancyId: number;
+  marked: boolean;
+  drafted?: boolean;
+}) {
+  if (drafted) {
+    return (
+      <button
+        type="button"
+        className={`${ICON_CLASS} text-accent`}
+        disabled
+        aria-label="Drafted"
+        title="Drafted"
+      >
+        <BoltGlyph filled />
+      </button>
+    );
+  }
   return (
     <MarkToggle
       marked={marked}

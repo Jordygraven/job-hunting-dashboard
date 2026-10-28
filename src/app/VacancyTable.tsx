@@ -232,24 +232,32 @@ export function VacancyTable({
         <tbody>
           {rows.map((row) => {
             const starInteractive = view === "interest" || row.status === "todo";
+            // Drafted tint replaces the row background so it wins over the starred one.
+            const rowBg =
+              row.drafted && row.status !== "applied"
+                ? "bg-status-success-bg"
+                : row.starred
+                  ? "bg-surface-row-starred"
+                  : "bg-surface-row";
             return (
-              <tr
-                key={row.id}
-                className={`rounded-md transition-colors hover:bg-surface-row-hover ${
-                  row.starred ? "bg-surface-row-starred" : "bg-surface-row"
-                }`}
-              >
+              <tr key={row.id} className={`rounded-md transition-colors hover:bg-surface-row-hover ${rowBg}`}>
                 <td className={`rounded-l-md py-3 pr-3 pl-3 ${SHRINK_TO_CONTENT}`}>
                   <StarToggle vacancyId={row.id} starred={row.starred} interactive={starInteractive} />
                 </td>
                 <td className={`py-3 pr-3 ${SHRINK_TO_CONTENT}`}>
-                  <AutoDraftToggle vacancyId={row.id} marked={row.autoDraft} />
+                  <AutoDraftToggle vacancyId={row.id} marked={row.autoDraft} drafted={row.drafted} />
                 </td>
                 <td className={`py-3 pr-3 text-text-primary ${WRAP_ALLOWED_MIN_WIDTH.title}`}>{row.title}
                   {row.pilot && (
                     <>
                       {" "}
                       <Pill className="bg-tag-bg text-tag-fg">Pilot</Pill>
+                    </>
+                  )}
+                  {row.drafted && (
+                    <>
+                      {" "}
+                      <Pill className="bg-tag-bg text-tag-fg">Drafted</Pill>
                     </>
                   )}
                 </td>
