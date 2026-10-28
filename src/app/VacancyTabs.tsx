@@ -30,6 +30,7 @@ export function VacancyTabs({
   company,
   from,
   to,
+  pilot,
   sort,
   dir,
 }: VacancyHrefParams & { counts: VacancyTabCounts }) {
@@ -39,7 +40,7 @@ export function VacancyTabs({
         {TABS.map((tab) => (
           <Link
             key={tab.view}
-            href={buildVacancyHref({ view: tab.view, status, show, q, company, from, to, sort, dir })}
+            href={buildVacancyHref({ view: tab.view, status, show, q, company, from, to, pilot, sort, dir })}
             aria-current={view === tab.view ? "page" : undefined}
             className={`-mb-px border-b-2 pb-3 text-sm transition-colors ${
               view === tab.view
@@ -65,6 +66,7 @@ export function VacancyTabs({
                 company,
                 from,
                 to,
+                pilot,
                 sort,
                 dir,
               })}

@@ -4,6 +4,7 @@ import {
   countByView,
   describeShownRows,
   resolveReasonFilter,
+  resolvePilotFilter,
   resolveShow,
   resolveStatusFilter,
   resolveView,
@@ -240,6 +241,16 @@ describe("countByView", () => {
       all: 0,
       interest: 0,
     });
+  });
+});
+
+describe("resolvePilotFilter", () => {
+  test("is true only for pilot=1", () => {
+    expect(resolvePilotFilter("1")).toBe(true);
+    expect(resolvePilotFilter(["1", "0"])).toBe(true);
+    expect(resolvePilotFilter(undefined)).toBe(false);
+    expect(resolvePilotFilter("0")).toBe(false);
+    expect(resolvePilotFilter("true")).toBe(false);
   });
 });
 

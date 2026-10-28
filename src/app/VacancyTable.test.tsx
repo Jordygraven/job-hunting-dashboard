@@ -133,6 +133,15 @@ describe("VacancyTable — row rendering", () => {
     }
   );
 
+  test.each(["todo", "applied", "ignored", "success", "rejected"] as const)(
+    "a pilot %s row shows a Pilot badge in the title cell, a non-pilot row does not",
+    (status) => {
+      render(<VacancyTable view="all" rows={[row({ id: 1, title: "Pilot job", status, pilot: true }), row({ id: 2, title: "Plain job", status })]} {...NO_FILTERS} />);
+      expect(screen.getByRole("cell", { name: /Pilot job/ })).toHaveTextContent("Pilot");
+      expect(screen.getByRole("cell", { name: "Plain job" })).not.toHaveTextContent("Pilot");
+    }
+  );
+
   test("the interest tab also adds a Status column", () => {
     render(<VacancyTable view="interest" rows={[row({ status: "applied", starred: true })]} {...NO_FILTERS} />);
     expect(screen.getByRole("columnheader", { name: "Status" })).toBeInTheDocument();

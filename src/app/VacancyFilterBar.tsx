@@ -57,6 +57,7 @@ export function VacancyFilterBar({
   from,
   to,
   status,
+  pilot,
   companies,
   hasActiveFilters,
   sort,
@@ -66,7 +67,7 @@ export function VacancyFilterBar({
   // it (and its uncontrolled inputs) whenever they change via in-page
   // navigation, instead of leaving stale defaultValue-initialized DOM nodes
   // in place.
-  const formKey = JSON.stringify([view, reasonFilter, q, company, from, to, status]);
+  const formKey = JSON.stringify([view, reasonFilter, q, company, from, to, status, pilot]);
 
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -153,6 +154,11 @@ export function VacancyFilterBar({
           </select>
         </label>
       )}
+
+      <label className="flex items-center gap-2 pb-1 text-text-secondary">
+        <input type="checkbox" name="pilot" value="1" defaultChecked={pilot} className="accent-accent" />
+        Pilot only
+      </label>
 
       <button type="submit" className={buttonClass}>
         Search

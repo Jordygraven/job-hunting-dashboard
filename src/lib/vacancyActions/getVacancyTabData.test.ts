@@ -43,6 +43,24 @@ describe("getVacancyTabData", () => {
     expect(result.rows.map((r) => r.id)).toEqual([1]);
   });
 
+  test("pilot=1 keeps only pilot rows, flags hasActiveFilters, leaves tab counts unchanged", async () => {
+    getVacanciesMock.mockResolvedValue(VACANCIES);
+    getVacancyFlagsMock.mockResolvedValue(
+      new Map([[2, { status: { status: "todo" }, starred: false, autoDraft: false, pilot: true, drafted: false }]])
+    );
+
+    const plain = await getVacancyTabData({});
+    const result = await getVacancyTabData({ pilot: "1" });
+
+    expect(result.rows.map((r) => r.id)).toEqual([2]);
+    expect(result.filteredCount).toBe(1);
+    expect(result.pilot).toBe(true);
+    expect(result.hasActiveFilters).toBe(true);
+    expect(result.counts).toEqual(plain.counts);
+    expect(plain.pilot).toBe(false);
+    expect(plain.hasActiveFilters).toBe(false);
+  });
+
   test("passes autoDraft, pilot and drafted flags through to the row", async () => {
     getVacanciesMock.mockResolvedValue(VACANCIES);
     getVacancyFlagsMock.mockResolvedValue(

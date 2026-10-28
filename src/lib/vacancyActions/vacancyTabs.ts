@@ -156,6 +156,10 @@ export function countByView(rows: VacancyTabRow[]): VacancyTabCounts {
   };
 }
 
+export function resolvePilotFilter(value: string | string[] | undefined): boolean {
+  return firstOf(value) === "1";
+}
+
 export type ShowParam = 10 | 20 | "all";
 
 export function resolveShow(value: string | string[] | undefined): ShowParam {

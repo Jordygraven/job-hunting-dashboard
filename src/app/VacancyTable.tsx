@@ -138,6 +138,7 @@ export function VacancyTable({
   company,
   from,
   to,
+  pilot,
   sort,
   dir,
 }: VacancyHrefParams & {
@@ -162,7 +163,7 @@ export function VacancyTable({
     return <p className="text-text-secondary">{EMPTY_STATE_TEXT[view]}</p>;
   }
 
-  const hrefParams: VacancyHrefParams = { view, reasonFilter, status, show, q, company, from, to };
+  const hrefParams: VacancyHrefParams = { view, reasonFilter, status, show, q, company, from, to, pilot };
   const activeSort = sort ?? null;
   const activeDir = dir ?? null;
   const columns = COLUMNS_BY_VIEW[view];
@@ -243,7 +244,14 @@ export function VacancyTable({
                 <td className={`py-3 pr-3 ${SHRINK_TO_CONTENT}`}>
                   <AutoDraftToggle vacancyId={row.id} marked={row.autoDraft} />
                 </td>
-                <td className={`py-3 pr-3 text-text-primary ${WRAP_ALLOWED_MIN_WIDTH.title}`}>{row.title}</td>
+                <td className={`py-3 pr-3 text-text-primary ${WRAP_ALLOWED_MIN_WIDTH.title}`}>{row.title}
+                  {row.pilot && (
+                    <>
+                      {" "}
+                      <Pill className="bg-tag-bg text-tag-fg">Pilot</Pill>
+                    </>
+                  )}
+                </td>
                 <td
                   className={`py-3 pr-3 text-text-secondary ${WRAP_ALLOWED_MIN_WIDTH.company} ${SHRINK_TO_CONTENT}`}
                 >

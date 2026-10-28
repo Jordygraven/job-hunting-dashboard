@@ -25,6 +25,11 @@ describe("buildVacancyHref", () => {
     expect(buildVacancyHref({ view: "todo", status: "applied" })).toBe("/?view=todo");
   });
 
+  test("includes pilot=1 only when pilot is true", () => {
+    expect(buildVacancyHref({ view: "todo", pilot: true })).toBe("/?view=todo&pilot=1");
+    expect(buildVacancyHref({ view: "todo", pilot: false })).toBe("/?view=todo");
+  });
+
   test("omits show at the default (10), includes it otherwise", () => {
     expect(buildVacancyHref({ view: "todo", show: 10 })).toBe("/?view=todo");
     expect(buildVacancyHref({ view: "todo", show: 20 })).toBe("/?view=todo&show=20");

@@ -12,6 +12,7 @@ export function VacancyPagination({
   company,
   from,
   to,
+  pilot,
   sort,
   dir,
 }: VacancyHrefParams & { filteredCount: number; show: ShowParam }) {
@@ -36,6 +37,7 @@ export function VacancyPagination({
             company,
             from,
             to,
+            pilot,
             sort,
             dir,
           })}

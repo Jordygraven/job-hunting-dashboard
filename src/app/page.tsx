@@ -36,6 +36,7 @@ export default async function Home({
       company,
       from,
       to,
+      pilot,
       companies,
       hasActiveFilters,
       sort,
@@ -101,6 +102,7 @@ export default async function Home({
             company={company}
             from={from}
             to={to}
+            pilot={pilot}
             status={statusFilter}
             companies={companies}
             hasActiveFilters={hasActiveFilters}
@@ -117,6 +119,7 @@ export default async function Home({
             company={company}
             from={from}
             to={to}
+            pilot={pilot}
             sort={sort}
             dir={dir}
           />
@@ -132,6 +135,7 @@ export default async function Home({
             company={company}
             from={from}
             to={to}
+            pilot={pilot}
             sort={sort}
             dir={dir}
           />
@@ -145,6 +149,7 @@ export default async function Home({
             company={company}
             from={from}
             to={to}
+            pilot={pilot}
             sort={sort}
             dir={dir}
           />
