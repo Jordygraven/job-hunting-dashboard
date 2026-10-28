@@ -181,6 +181,25 @@ export function VacancyTable({
             <th scope="col" className={`py-2 pr-3 font-medium whitespace-nowrap text-text-secondary ${SHRINK_TO_CONTENT}`}>
               Star
             </th>
+            <th
+              scope="col"
+              aria-label="Auto-draft"
+              title="Auto-draft"
+              className={`py-2 pr-3 font-medium whitespace-nowrap text-text-secondary ${SHRINK_TO_CONTENT}`}
+            >
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 16 16"
+                width="14"
+                height="14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.3"
+                strokeLinejoin="round"
+              >
+                <path d="M9 1.5L3 9h4l-1 5.5L13 7H9l0-5.5z" />
+              </svg>
+            </th>
             {columns.includes("title") && header("title")}
             {columns.includes("company") && header("company")}
             {columns.includes("location") && header("location")}
@@ -220,6 +239,9 @@ export function VacancyTable({
               >
                 <td className={`rounded-l-md py-3 pr-3 pl-3 ${SHRINK_TO_CONTENT}`}>
                   <StarToggle vacancyId={row.id} starred={row.starred} interactive={starInteractive} />
+                </td>
+                <td className={`py-3 pr-3 ${SHRINK_TO_CONTENT}`}>
+                  <AutoDraftToggle vacancyId={row.id} marked={row.autoDraft} />
                 </td>
                 <td className={`py-3 pr-3 text-text-primary ${WRAP_ALLOWED_MIN_WIDTH.title}`}>{row.title}</td>
                 <td
@@ -275,7 +297,6 @@ export function VacancyTable({
                       appliedOn={row.appliedOn}
                       outcomeOn={row.outcomeOn}
                     />
-                    <AutoDraftToggle vacancyId={row.id} marked={row.autoDraft} />
                     <PilotToggle vacancyId={row.id} marked={row.pilot} />
                   </div>
                 </td>

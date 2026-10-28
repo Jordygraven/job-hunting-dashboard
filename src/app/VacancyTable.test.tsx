@@ -169,6 +169,19 @@ describe("VacancyTable — row rendering", () => {
   });
 });
 
+describe("VacancyTable — Auto-draft column", () => {
+  test.each(["todo", "interest", "applied", "all", "success", "rejected", "ignored"] as const)(
+    "the %s view has an Auto-draft header and an auto-draft cell with a titled button",
+    (view) => {
+      render(<VacancyTable view={view} rows={[row({ status: "applied" })]} {...NO_FILTERS} />);
+      expect(screen.getByRole("columnheader", { name: "Auto-draft" })).toHaveAttribute("title", "Auto-draft");
+      const button = screen.getByRole("button", { name: "Mark for auto-draft" });
+      expect(button).toHaveAttribute("title", "Mark for auto-draft");
+      expect(button.closest("td")).not.toBeNull();
+    }
+  );
+});
+
 describe("VacancyTable — Star column", () => {
   test("every view has a Star column header", () => {
     render(<VacancyTable view="todo" rows={[row()]} {...NO_FILTERS} />);

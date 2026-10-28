@@ -109,7 +109,7 @@
   --radius-md: var(--radius-md);
   --radius-lg: var(--radius-lg);
 
-  --container-content: min(100% - 3rem, 1680px);
+  --container-content: min(100% - 3rem, 1728px);
 }
 
 body {
