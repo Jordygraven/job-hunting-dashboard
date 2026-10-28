@@ -22,6 +22,9 @@ function row(overrides: Partial<VacancyTabRow> = {}): VacancyTabRow {
     ignoredOn: null,
     ignoreReason: null,
     starred: false,
+    autoDraft: false,
+    pilot: false,
+    drafted: false,
     ...overrides,
   };
 }

@@ -25,6 +25,9 @@ function row(overrides: Partial<VacancyTabRow> = {}): VacancyTabRow {
     ignoredOn: null,
     ignoreReason: null,
     starred: false,
+    autoDraft: false,
+    pilot: false,
+    drafted: false,
     ...overrides,
   };
 }
@@ -120,6 +123,15 @@ describe("VacancyTable — row rendering", () => {
     render(<VacancyTable view="all" rows={[row({ status: "todo" })]} {...NO_FILTERS} />);
     expect(screen.getByRole("cell", { name: "To do" })).toBeInTheDocument();
   });
+
+  test.each(["todo", "applied", "ignored", "success", "rejected"] as const)(
+    "a %s row shows auto-draft and pilot toggles reflecting its flags",
+    (status) => {
+      render(<VacancyTable view="all" rows={[row({ status, autoDraft: true, pilot: false })]} {...NO_FILTERS} />);
+      expect(screen.getByRole("button", { name: "Unmark auto-draft" })).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByRole("button", { name: "Mark as pilot" })).toHaveAttribute("aria-pressed", "false");
+    }
+  );
 
   test("the interest tab also adds a Status column", () => {
     render(<VacancyTable view="interest" rows={[row({ status: "applied", starred: true })]} {...NO_FILTERS} />);

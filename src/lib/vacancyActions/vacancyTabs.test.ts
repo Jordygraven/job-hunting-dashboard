@@ -26,6 +26,8 @@ function vacancy(overrides: Partial<Vacancy> = {}): Vacancy {
   };
 }
 
+const NO_AUTOMATION = { autoDraft: false, pilot: false, drafted: false };
+
 function tabRow(overrides: Partial<VacancyTabRow> = {}): VacancyTabRow {
   return {
     id: 1,
@@ -40,6 +42,9 @@ function tabRow(overrides: Partial<VacancyTabRow> = {}): VacancyTabRow {
     ignoredOn: null,
     ignoreReason: null,
     starred: false,
+    autoDraft: false,
+    pilot: false,
+    drafted: false,
     ...overrides,
   };
 }
@@ -120,34 +125,34 @@ describe("resolveStatusFilter", () => {
 describe("buildVacancyTabRow", () => {
   test("todo status carries no date/reason, starred passed through", () => {
     const status: VacancyStatus = { status: "todo" };
-    expect(buildVacancyTabRow(vacancy(), status, false)).toEqual(tabRow({ status: "todo", starred: false }));
-    expect(buildVacancyTabRow(vacancy(), status, true)).toEqual(tabRow({ status: "todo", starred: true }));
+    expect(buildVacancyTabRow(vacancy(), status, false, NO_AUTOMATION)).toEqual(tabRow({ status: "todo", starred: false }));
+    expect(buildVacancyTabRow(vacancy(), status, true, NO_AUTOMATION)).toEqual(tabRow({ status: "todo", starred: true }));
   });
 
   test("applied status carries appliedOn, no outcomeOn/ignoredOn/reason", () => {
     const status: VacancyStatus = { status: "applied", appliedOn: "2026-10-02" };
-    expect(buildVacancyTabRow(vacancy(), status, false)).toEqual(
+    expect(buildVacancyTabRow(vacancy(), status, false, NO_AUTOMATION)).toEqual(
       tabRow({ status: "applied", appliedOn: "2026-10-02" })
     );
   });
 
   test("ignored status carries ignoredOn and reason (possibly null)", () => {
     const status: VacancyStatus = { status: "ignored", reason: "interest", date: "2026-10-03" };
-    expect(buildVacancyTabRow(vacancy(), status, false)).toEqual(
+    expect(buildVacancyTabRow(vacancy(), status, false, NO_AUTOMATION)).toEqual(
       tabRow({ status: "ignored", ignoredOn: "2026-10-03", ignoreReason: "interest" })
     );
   });
 
   test("success status carries both appliedOn and outcomeOn", () => {
     const status: VacancyStatus = { status: "success", appliedOn: "2026-10-01", outcomeOn: "2026-10-05" };
-    expect(buildVacancyTabRow(vacancy(), status, false)).toEqual(
+    expect(buildVacancyTabRow(vacancy(), status, false, NO_AUTOMATION)).toEqual(
       tabRow({ status: "success", appliedOn: "2026-10-01", outcomeOn: "2026-10-05" })
     );
   });
 
   test("rejected status carries both appliedOn and outcomeOn", () => {
     const status: VacancyStatus = { status: "rejected", appliedOn: "2026-10-01", outcomeOn: "2026-10-08" };
-    expect(buildVacancyTabRow(vacancy(), status, true)).toEqual(
+    expect(buildVacancyTabRow(vacancy(), status, true, NO_AUTOMATION)).toEqual(
       tabRow({ status: "rejected", appliedOn: "2026-10-01", outcomeOn: "2026-10-08", starred: true })
     );
   });

@@ -6,6 +6,7 @@ import { buildVacancyHref, type VacancyHrefParams } from "@/lib/vacancyActions/v
 import { columnLabel, COLUMNS_BY_VIEW, nextSortState, type SortableColumnKey } from "@/lib/vacancyActions/vacancySort";
 import { VacancyActions } from "./VacancyActions";
 import { StarToggle } from "./StarToggle";
+import { AutoDraftToggle, PilotToggle } from "./AutomationToggle";
 
 const EMPTY_STATE_TEXT: Record<VacancyTabView, string> = {
   todo: "No vacancies to triage.",
@@ -267,12 +268,16 @@ export function VacancyTable({
                   </td>
                 )}
                 <td className={`rounded-r-md py-3 pr-3 whitespace-nowrap ${SHRINK_TO_CONTENT}`}>
-                  <VacancyActions
-                    vacancyId={row.id}
-                    status={row.status}
-                    appliedOn={row.appliedOn}
-                    outcomeOn={row.outcomeOn}
-                  />
+                  <div className="flex items-start gap-2">
+                    <VacancyActions
+                      vacancyId={row.id}
+                      status={row.status}
+                      appliedOn={row.appliedOn}
+                      outcomeOn={row.outcomeOn}
+                    />
+                    <AutoDraftToggle vacancyId={row.id} marked={row.autoDraft} />
+                    <PilotToggle vacancyId={row.id} marked={row.pilot} />
+                  </div>
                 </td>
               </tr>
             );

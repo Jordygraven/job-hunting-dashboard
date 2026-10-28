@@ -66,10 +66,13 @@ describe("getVacancyFlags", () => {
 
     const flags = await getVacancyFlags();
 
-    expect(flags.get(10)).toEqual({ status: { status: "todo" }, starred: false });
+    expect(flags.get(10)).toEqual({ status: { status: "todo" }, starred: false, autoDraft: false, pilot: false, drafted: false });
     expect(flags.get(20)).toEqual({
       status: { status: "ignored", reason: "language", date: "2026-10-02" },
       starred: false,
+      autoDraft: false,
+      pilot: false,
+      drafted: false,
     });
     expect(flags.size).toBe(2);
     expect(orderMock).toHaveBeenCalledWith("id", { ascending: false });
@@ -93,7 +96,31 @@ describe("getVacancyFlags", () => {
     expect(flags.get(10)).toEqual({
       status: { status: "applied", appliedOn: "2026-10-02" },
       starred: true,
+      autoDraft: false,
+      pilot: false,
+      drafted: false,
     });
+  });
+
+  test("derives autoDraft, pilot and drafted per vacancy", async () => {
+    const { table } = actionsTable([
+      {
+        data: [
+          dbRow({ id: 4, vacancy_id: 10, action: "pilot" }),
+          dbRow({ id: 3, vacancy_id: 10, action: "automated_draft_done" }),
+          dbRow({ id: 2, vacancy_id: 10, action: "automated_draft" }),
+          dbRow({ id: 1, vacancy_id: 20, action: "automated_draft_cleared" }),
+        ],
+        error: null,
+      },
+      { data: [], error: null },
+    ]);
+    fromMock.mockReturnValue(table);
+
+    const flags = await getVacancyFlags();
+
+    expect(flags.get(10)).toMatchObject({ autoDraft: true, pilot: true, drafted: true });
+    expect(flags.get(20)).toMatchObject({ autoDraft: false, pilot: false, drafted: false });
   });
 
   test("a truncated older row can't change the result — pagination collects every row, not just the first seen", async () => {
@@ -114,6 +141,9 @@ describe("getVacancyFlags", () => {
     expect(flags.get(10)).toEqual({
       status: { status: "ignored", reason: "language", date: "2026-10-05" },
       starred: false,
+      autoDraft: false,
+      pilot: false,
+      drafted: false,
     });
     expect(flags.size).toBe(1);
   });
@@ -145,6 +175,9 @@ describe("getVacancyFlags", () => {
     expect(flags.get(SUPABASE_MAX_ROWS + 1)).toEqual({
       status: { status: "ignored", reason: "other", date: "2026-09-01" },
       starred: false,
+      autoDraft: false,
+      pilot: false,
+      drafted: false,
     });
     expect(limitMock).toHaveBeenCalledTimes(3);
     expect(ltMock).toHaveBeenCalledTimes(2);

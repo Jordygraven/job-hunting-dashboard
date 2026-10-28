@@ -56,8 +56,18 @@ export async function getVacancyTabData(params: VacancyTabSearchParams): Promise
   const [vacancies, flags] = await Promise.all([getVacancies(), getVacancyFlags()]);
 
   const allRows = vacancies.map((vacancy) => {
-    const flag = flags.get(vacancy.id) ?? { status: { status: "todo" as const }, starred: false };
-    return buildVacancyTabRow(vacancy, flag.status, flag.starred);
+    const flag = flags.get(vacancy.id) ?? {
+      status: { status: "todo" as const },
+      starred: false,
+      autoDraft: false,
+      pilot: false,
+      drafted: false,
+    };
+    return buildVacancyTabRow(vacancy, flag.status, flag.starred, {
+      autoDraft: flag.autoDraft,
+      pilot: flag.pilot,
+      drafted: flag.drafted,
+    });
   });
 
   const view = resolveView(params.view);

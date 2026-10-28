@@ -17,6 +17,9 @@ export type VacancyTabRow = {
   ignoredOn: string | null;
   ignoreReason: IgnoreReason | null;
   starred: boolean;
+  autoDraft: boolean;
+  pilot: boolean;
+  drafted: boolean;
 };
 
 export type VacancyTabCounts = {
@@ -86,7 +89,12 @@ export const STATUS_LABELS: Record<VacancyTabRow["status"], string> = {
   ignored: "Ignored",
 };
 
-export function buildVacancyTabRow(vacancy: Vacancy, status: VacancyStatus, starred: boolean): VacancyTabRow {
+export function buildVacancyTabRow(
+  vacancy: Vacancy,
+  status: VacancyStatus,
+  starred: boolean,
+  automation: Pick<VacancyTabRow, "autoDraft" | "pilot" | "drafted">
+): VacancyTabRow {
   const appliedOn =
     status.status === "applied" || status.status === "success" || status.status === "rejected"
       ? status.appliedOn
@@ -106,6 +114,7 @@ export function buildVacancyTabRow(vacancy: Vacancy, status: VacancyStatus, star
     ignoredOn: status.status === "ignored" ? status.date : null,
     ignoreReason: status.status === "ignored" ? status.reason : null,
     starred,
+    ...automation,
   };
 }
 
