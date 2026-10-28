@@ -2,11 +2,18 @@ import "server-only";
 
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { fetchAllRows, SUPABASE_MAX_ROWS } from "@/lib/supabase/fetchAllRows";
-import { deriveStarred, deriveVacancyStatus } from "./deriveVacancyStatus";
+import { deriveAutoDraft, deriveDrafted, deriveInQueue, derivePilot, deriveStarred, deriveVacancyStatus } from "./deriveVacancyStatus";
 import { mapVacancyActionRow, type VacancyActionDbRow } from "./mapVacancyActionRow";
 import type { VacancyActionRow, VacancyStatus } from "./types";
 
-export type VacancyFlags = { status: VacancyStatus; starred: boolean };
+export type VacancyFlags = {
+  status: VacancyStatus;
+  starred: boolean;
+  autoDraft: boolean;
+  pilot: boolean;
+  drafted: boolean;
+  queued: boolean;
+};
 
 export async function getVacancyFlags(): Promise<Map<number, VacancyFlags>> {
   const supabase = getSupabaseServerClient();
@@ -41,6 +48,10 @@ export async function getVacancyFlags(): Promise<Map<number, VacancyFlags>> {
     flags.set(vacancyId, {
       status: deriveVacancyStatus(vacancyRows),
       starred: deriveStarred(vacancyRows),
+      autoDraft: deriveAutoDraft(vacancyRows),
+      pilot: derivePilot(vacancyRows),
+      drafted: deriveDrafted(vacancyRows),
+      queued: deriveInQueue(vacancyRows),
     });
   }
   return flags;

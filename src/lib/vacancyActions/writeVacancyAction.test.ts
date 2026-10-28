@@ -256,6 +256,39 @@ describe("writeVacancyAction guards", () => {
     expect(result).toEqual({ ok: false, error: "Not starred." });
     expect(insertMock).not.toHaveBeenCalled();
   });
+
+  test.each([
+    ["autoDraft", "automated_draft", "Already marked for auto-draft.", "clearAutoDraft", "Not marked for auto-draft."],
+    ["pilot", "pilot", "Already marked as pilot.", "clearPilot", "Not marked as pilot."],
+  ] as const)("%s guards reject double-mark and clear-when-unmarked", async (intent, action, alreadyError, clearIntent, notError) => {
+    mockTables({ actionRows: { data: [actionRow({ action })], error: null } });
+    expect(await writeVacancyAction({ intent, vacancyId: 1 })).toEqual({ ok: false, error: alreadyError });
+
+    mockTables({ actionRows: { data: [], error: null } });
+    expect(await writeVacancyAction({ intent: clearIntent, vacancyId: 1 })).toEqual({ ok: false, error: notError });
+    expect(insertMock).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    ["autoDraft", []],
+    ["autoDraft", ["automated_draft"]],
+    ["clearAutoDraft", []],
+    ["clearAutoDraft", ["automated_draft"]],
+  ] as const)("%s is rejected as drafted when a done row exists (prior rows %j)", async (intent, prior) => {
+    const rows = [
+      ...prior.map((action, i) => actionRow({ id: i + 1, action })),
+      actionRow({ id: 10, action: "automated_draft_done" }),
+    ];
+    mockTables({ actionRows: { data: rows, error: null } });
+    expect(await writeVacancyAction({ intent, vacancyId: 1 })).toEqual({ ok: false, error: "Already drafted." });
+    expect(insertMock).not.toHaveBeenCalled();
+  });
+
+  test("auto-draft and pilot are allowed on any status", async () => {
+    mockTables({ actionRows: { data: [actionRow({ action: "ignored", ignore_reason: "other" })], error: null } });
+    expect(await writeVacancyAction({ intent: "autoDraft", vacancyId: 1 })).toEqual({ ok: true });
+    expect(await writeVacancyAction({ intent: "pilot", vacancyId: 1 })).toEqual({ ok: true });
+  });
 });
 
 describe("writeVacancyAction success paths", () => {
@@ -453,6 +486,18 @@ describe("writeVacancyAction success paths", () => {
     const result = await writeVacancyAction({ intent: "unstar", vacancyId: 1 });
     expect(result).toEqual({ ok: true });
     expect(insertMock).toHaveBeenCalledWith({ vacancy_id: 1, action: "unstarred" });
+  });
+
+  test.each([
+    ["autoDraft", [], "automated_draft"],
+    ["clearAutoDraft", ["automated_draft"], "automated_draft_cleared"],
+    ["pilot", [], "pilot"],
+    ["clearPilot", ["pilot"], "pilot_cleared"],
+  ] as const)("%s inserts a %s row with no other fields", async (intent, existing, action) => {
+    mockTables({ actionRows: { data: existing.map((a) => actionRow({ action: a })), error: null } });
+    const result = await writeVacancyAction({ intent, vacancyId: 1 });
+    expect(result).toEqual({ ok: true });
+    expect(insertMock).toHaveBeenCalledWith({ vacancy_id: 1, action });
   });
 
   test("unstar is allowed from any status (the Interest tab's unstar), and never touches the status row history", async () => {

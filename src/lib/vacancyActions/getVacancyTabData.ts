@@ -6,6 +6,7 @@ import { distinctCompaniesSorted, matchesVacancyFilters, resolveVacancyFilters }
 import {
   buildVacancyTabRow,
   countByView,
+  resolvePilotFilter,
   resolveReasonFilter,
   resolveShow,
   resolveStatusFilter,
@@ -30,6 +31,7 @@ export type VacancyTabSearchParams = {
   from?: string | string[];
   to?: string | string[];
   status?: string | string[];
+  pilot?: string | string[];
   sort?: string | string[];
   dir?: string | string[];
 };
@@ -46,6 +48,7 @@ export type VacancyTabData = {
   company: string | null;
   from: string | null;
   to: string | null;
+  pilot: boolean;
   companies: string[];
   hasActiveFilters: boolean;
   sort: SortableColumnKey | null;
@@ -56,14 +59,27 @@ export async function getVacancyTabData(params: VacancyTabSearchParams): Promise
   const [vacancies, flags] = await Promise.all([getVacancies(), getVacancyFlags()]);
 
   const allRows = vacancies.map((vacancy) => {
-    const flag = flags.get(vacancy.id) ?? { status: { status: "todo" as const }, starred: false };
-    return buildVacancyTabRow(vacancy, flag.status, flag.starred);
+    const flag = flags.get(vacancy.id) ?? {
+      status: { status: "todo" as const },
+      starred: false,
+      autoDraft: false,
+      pilot: false,
+      drafted: false,
+      queued: false,
+    };
+    return buildVacancyTabRow(vacancy, flag.status, flag.starred, {
+      autoDraft: flag.autoDraft,
+      pilot: flag.pilot,
+      drafted: flag.drafted,
+      queued: flag.queued,
+    });
   });
 
   const view = resolveView(params.view);
   const reasonFilter = resolveReasonFilter(view, params.reason);
   const statusFilter = resolveStatusFilter(view, params.status);
   const show = resolveShow(params.show);
+  const pilot = resolvePilotFilter(params.pilot);
   const filters = resolveVacancyFilters(params);
   const { sort, dir } = resolveSort(view, params.sort, params.dir);
 
@@ -73,6 +89,10 @@ export async function getVacancyTabData(params: VacancyTabSearchParams): Promise
   let filteredRows = selectRowsForView(commonFilteredRows, view, reasonFilter);
   if (statusFilter) {
     filteredRows = filteredRows.filter((row) => row.status === statusFilter);
+  }
+  // After countByView, so tab counts ignore the pilot filter.
+  if (pilot) {
+    filteredRows = filteredRows.filter((row) => row.pilot);
   }
   filteredRows = sortRows(filteredRows, sort, dir);
 
@@ -85,11 +105,12 @@ export async function getVacancyTabData(params: VacancyTabSearchParams): Promise
     company: filters.company,
     from: filters.from,
     to: filters.to,
+    pilot,
     companies: distinctCompaniesSorted(allRows),
     counts,
     rows: sliceRowsForShow(filteredRows, show),
     filteredCount: filteredRows.length,
-    hasActiveFilters: Boolean(filters.q || filters.company || filters.from || filters.to || statusFilter),
+    hasActiveFilters: Boolean(filters.q || filters.company || filters.from || filters.to || statusFilter || pilot),
     sort,
     dir,
   };

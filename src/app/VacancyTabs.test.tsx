@@ -12,7 +12,7 @@ afterEach(() => {
 const BASE = { status: null, q: null, company: null, from: null, to: null, sort: null, dir: null };
 
 function counts(overrides: Partial<VacancyTabCounts> = {}): VacancyTabCounts {
-  return { todo: 0, applied: 0, success: 0, rejected: 0, ignored: 0, all: 0, interest: 0, ...overrides };
+  return { todo: 0, applied: 0, success: 0, rejected: 0, ignored: 0, all: 0, interest: 0, autodraft: 0, ...overrides };
 }
 
 describe("VacancyTabs", () => {
@@ -32,11 +32,11 @@ describe("VacancyTabs", () => {
     expect(screen.getByRole("link", { name: /^all \(6\)/i })).toBeInTheDocument();
   });
 
-  test("lists all seven confirmed tabs, in order, including Interest/Success/Rejected", () => {
+  test("lists all eight tabs, in order", () => {
     render(<VacancyTabs view="todo" counts={counts()} reasonFilter={null} show={10} {...BASE} />);
     const tabNav = screen.getByRole("navigation", { name: "Vacancy tabs" });
     const labels = Array.from(tabNav.querySelectorAll("a")).map((a) => a.textContent?.replace(/\s*\(\d+\)$/, ""));
-    expect(labels).toEqual(["To do", "Interest", "Applied", "All", "Success", "Rejected", "Ignored"]);
+    expect(labels).toEqual(["To do", "Interest", "Applied", "All", "Success", "Rejected", "Ignored", "Auto-draft"]);
   });
 
   test("the Interest tab shows its own count, independent of All's count", () => {
@@ -51,6 +51,11 @@ describe("VacancyTabs", () => {
     );
     expect(screen.getByRole("link", { name: /interest \(4\)/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /^all \(6\)/i })).toBeInTheDocument();
+  });
+
+  test("the Auto-draft tab shows its own count and links to view=autodraft", () => {
+    render(<VacancyTabs view="todo" counts={counts({ all: 6, autodraft: 2 })} reasonFilter={null} show={10} {...BASE} />);
+    expect(screen.getByRole("link", { name: /auto-draft \(2\)/i })).toHaveAttribute("href", "/?view=autodraft");
   });
 
   test("shows the reason filter links only on the ignored tab", () => {

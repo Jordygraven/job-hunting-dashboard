@@ -25,6 +25,10 @@ function row(overrides: Partial<VacancyTabRow> = {}): VacancyTabRow {
     ignoredOn: null,
     ignoreReason: null,
     starred: false,
+    autoDraft: false,
+    pilot: false,
+    drafted: false,
+    queued: false,
     ...overrides,
   };
 }
@@ -121,6 +125,73 @@ describe("VacancyTable — row rendering", () => {
     expect(screen.getByRole("cell", { name: "To do" })).toBeInTheDocument();
   });
 
+  test.each(["todo", "applied", "ignored", "success", "rejected"] as const)(
+    "a %s row shows auto-draft and pilot toggles reflecting its flags",
+    (status) => {
+      render(<VacancyTable view="all" rows={[row({ status, autoDraft: true, pilot: false })]} {...NO_FILTERS} />);
+      expect(screen.getByRole("button", { name: "Unmark auto-draft" })).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByRole("button", { name: "Mark as pilot" })).toHaveAttribute("aria-pressed", "false");
+    }
+  );
+
+  test.each(["todo", "applied", "ignored", "success", "rejected"] as const)(
+    "a pilot %s row shows a Pilot badge in the title cell, a non-pilot row does not",
+    (status) => {
+      render(<VacancyTable view="all" rows={[row({ id: 1, title: "Pilot job", status, pilot: true }), row({ id: 2, title: "Plain job", status })]} {...NO_FILTERS} />);
+      expect(screen.getByRole("cell", { name: /Pilot job/ })).toHaveTextContent("Pilot");
+      expect(screen.getByRole("cell", { name: "Plain job" })).not.toHaveTextContent("Pilot");
+    }
+  );
+
+  test.each(["todo", "applied", "ignored", "success", "rejected", "interest", "autodraft", "all"] as const)(
+    "a drafted row shows a Drafted badge on the %s view, a plain row does not",
+    (view) => {
+      render(<VacancyTable view={view} rows={[row({ id: 1, title: "Drafted job", drafted: true }), row({ id: 2, title: "Plain job" })]} {...NO_FILTERS} />);
+      expect(screen.getByRole("cell", { name: /Drafted job/ })).toHaveTextContent("Drafted");
+      expect(screen.getByRole("cell", { name: "Plain job" })).not.toHaveTextContent("Drafted");
+    }
+  );
+
+  test.each([
+    ["todo", true],
+    ["ignored", true],
+    ["success", true],
+    ["rejected", true],
+    ["applied", false],
+  ] as const)("a drafted %s row has the green tint: %s", (status, tinted) => {
+    render(<VacancyTable view="all" rows={[row({ title: "Drafted job", status, drafted: true })]} {...NO_FILTERS} />);
+    const tr = screen.getByRole("cell", { name: /Drafted job/ }).closest("tr")!;
+    if (tinted) {
+      expect(tr).toHaveClass("bg-status-success-bg");
+      expect(tr).not.toHaveClass("bg-surface-row");
+    } else {
+      expect(tr).not.toHaveClass("bg-status-success-bg");
+      expect(tr).toHaveClass("bg-surface-row");
+    }
+  });
+
+  test("a non-drafted row has no tint", () => {
+    render(<VacancyTable view="all" rows={[row({ title: "Plain job" })]} {...NO_FILTERS} />);
+    expect(screen.getByRole("cell", { name: "Plain job" }).closest("tr")).not.toHaveClass("bg-status-success-bg");
+  });
+
+  test("a drafted starred row has the tint, not the starred background, and keeps its star", () => {
+    render(<VacancyTable view="all" rows={[row({ title: "Drafted job", drafted: true, starred: true })]} {...NO_FILTERS} />);
+    const tr = screen.getByRole("cell", { name: /Drafted job/ }).closest("tr")!;
+    expect(tr).toHaveClass("bg-status-success-bg");
+    expect(tr).not.toHaveClass("bg-surface-row-starred");
+    expect(screen.getByRole("button", { name: "Unstar" })).toBeInTheDocument();
+  });
+
+  test("the auto-draft button on a drafted row is disabled and labelled Drafted, with no visible text", () => {
+    render(<VacancyTable view="all" rows={[row({ drafted: true, autoDraft: true })]} {...NO_FILTERS} />);
+    const button = screen.getByRole("button", { name: "Drafted" });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute("title", "Drafted");
+    expect(button).toHaveTextContent("");
+    expect(screen.queryByRole("button", { name: "Unmark auto-draft" })).not.toBeInTheDocument();
+  });
+
   test("the interest tab also adds a Status column", () => {
     render(<VacancyTable view="interest" rows={[row({ status: "applied", starred: true })]} {...NO_FILTERS} />);
     expect(screen.getByRole("columnheader", { name: "Status" })).toBeInTheDocument();
@@ -155,6 +226,19 @@ describe("VacancyTable — row rendering", () => {
     render(<VacancyTable view="all" rows={[row({ status: "success" })]} {...NO_FILTERS} />);
     expect(screen.queryByRole("columnheader", { name: "Outcome on" })).not.toBeInTheDocument();
   });
+});
+
+describe("VacancyTable — Auto-draft column", () => {
+  test.each(["todo", "interest", "applied", "all", "success", "rejected", "ignored"] as const)(
+    "the %s view has an Auto-draft header and an auto-draft cell with a titled button",
+    (view) => {
+      render(<VacancyTable view={view} rows={[row({ status: "applied" })]} {...NO_FILTERS} />);
+      expect(screen.getByRole("columnheader", { name: "Auto-draft" })).toHaveAttribute("title", "Auto-draft");
+      const button = screen.getByRole("button", { name: "Mark for auto-draft" });
+      expect(button).toHaveAttribute("title", "Mark for auto-draft");
+      expect(button.closest("td")).not.toBeNull();
+    }
+  );
 });
 
 describe("VacancyTable — Star column", () => {

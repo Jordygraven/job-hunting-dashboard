@@ -2,7 +2,7 @@ import "server-only";
 
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { getKlDateString, isDateNotInFutureKl, isValidDateString } from "@/lib/format/kualaLumpurDate";
-import { deriveStarred, deriveVacancyStatus } from "./deriveVacancyStatus";
+import { deriveAutoDraft, deriveDrafted, derivePilot, deriveStarred, deriveVacancyStatus } from "./deriveVacancyStatus";
 import { mapVacancyActionRow } from "./mapVacancyActionRow";
 import type { IgnoreReason } from "./types";
 import {
@@ -22,7 +22,11 @@ export type WriteVacancyActionInput =
   | { intent: "markReject"; vacancyId: number }
   | { intent: "editOutcomeDate"; vacancyId: number; outcomeOn: string }
   | { intent: "star"; vacancyId: number }
-  | { intent: "unstar"; vacancyId: number };
+  | { intent: "unstar"; vacancyId: number }
+  | { intent: "autoDraft"; vacancyId: number }
+  | { intent: "clearAutoDraft"; vacancyId: number }
+  | { intent: "pilot"; vacancyId: number }
+  | { intent: "clearPilot"; vacancyId: number };
 
 export type WriteVacancyActionResult = { ok: true } | { ok: false; error: string };
 
@@ -33,14 +37,29 @@ type VacancyActionInsertRow =
   | { vacancy_id: number; action: "success"; outcome_on: string }
   | { vacancy_id: number; action: "rejected"; outcome_on: string }
   | { vacancy_id: number; action: "starred" }
-  | { vacancy_id: number; action: "unstarred" };
+  | { vacancy_id: number; action: "unstarred" }
+  | { vacancy_id: number; action: "automated_draft" }
+  | { vacancy_id: number; action: "automated_draft_cleared" }
+  | { vacancy_id: number; action: "pilot" }
+  | { vacancy_id: number; action: "pilot_cleared" };
 
 // supabase-js's insert() overloads can't resolve a union argument; widen to this
 // flat shape for the call itself, while construction above stays a discriminated
 // union so each branch can't pair the wrong field with the wrong action.
 type VacancyActionInsertPayload = {
   vacancy_id: number;
-  action: "applied" | "ignored" | "reset" | "success" | "rejected" | "starred" | "unstarred";
+  action:
+    | "applied"
+    | "ignored"
+    | "reset"
+    | "success"
+    | "rejected"
+    | "starred"
+    | "unstarred"
+    | "automated_draft"
+    | "automated_draft_cleared"
+    | "pilot"
+    | "pilot_cleared";
   applied_on?: string;
   ignore_reason?: IgnoreReason | null;
   outcome_on?: string;
@@ -95,6 +114,8 @@ export async function writeVacancyAction(
 
   const currentStatus = deriveVacancyStatus(rows);
   const starred = deriveStarred(rows);
+  const autoDraft = deriveAutoDraft(rows);
+  const pilot = derivePilot(rows);
 
   if (input.intent === "apply" && currentStatus.status === "applied") {
     return { ok: false, error: "Already marked as applied." };
@@ -157,6 +178,21 @@ export async function writeVacancyAction(
   if (input.intent === "unstar" && !starred) {
     return { ok: false, error: "Not starred." };
   }
+  if ((input.intent === "autoDraft" || input.intent === "clearAutoDraft") && deriveDrafted(rows)) {
+    return { ok: false, error: "Already drafted." };
+  }
+  if (input.intent === "autoDraft" && autoDraft) {
+    return { ok: false, error: "Already marked for auto-draft." };
+  }
+  if (input.intent === "clearAutoDraft" && !autoDraft) {
+    return { ok: false, error: "Not marked for auto-draft." };
+  }
+  if (input.intent === "pilot" && pilot) {
+    return { ok: false, error: "Already marked as pilot." };
+  }
+  if (input.intent === "clearPilot" && !pilot) {
+    return { ok: false, error: "Not marked as pilot." };
+  }
 
   let insertRow: VacancyActionInsertRow;
   switch (input.intent) {
@@ -192,6 +228,18 @@ export async function writeVacancyAction(
       break;
     case "unstar":
       insertRow = { vacancy_id: input.vacancyId, action: "unstarred" };
+      break;
+    case "autoDraft":
+      insertRow = { vacancy_id: input.vacancyId, action: "automated_draft" };
+      break;
+    case "clearAutoDraft":
+      insertRow = { vacancy_id: input.vacancyId, action: "automated_draft_cleared" };
+      break;
+    case "pilot":
+      insertRow = { vacancy_id: input.vacancyId, action: "pilot" };
+      break;
+    case "clearPilot":
+      insertRow = { vacancy_id: input.vacancyId, action: "pilot_cleared" };
       break;
   }
 

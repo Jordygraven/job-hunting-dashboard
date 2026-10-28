@@ -11,6 +11,7 @@ export type VacancyHrefParams = {
   company?: string | null;
   from?: string | null;
   to?: string | null;
+  pilot?: boolean;
   sort?: SortableColumnKey | null;
   dir?: SortDir | null;
 };
@@ -38,6 +39,9 @@ export function buildVacancyHref(params: VacancyHrefParams): string {
   }
   if (params.to) {
     searchParams.set("to", params.to);
+  }
+  if (params.pilot) {
+    searchParams.set("pilot", "1");
   }
   if (
     params.sort &&

@@ -1,5 +1,12 @@
 import { describe, expect, test } from "vitest";
-import { deriveStarred, deriveVacancyStatus } from "./deriveVacancyStatus";
+import {
+  deriveAutoDraft,
+  deriveDrafted,
+  deriveInQueue,
+  derivePilot,
+  deriveStarred,
+  deriveVacancyStatus,
+} from "./deriveVacancyStatus";
 import type { VacancyActionRow } from "./types";
 
 function row(overrides: Partial<VacancyActionRow>): VacancyActionRow {
@@ -136,6 +143,35 @@ describe("deriveVacancyStatus", () => {
       outcomeOn: "2026-10-05",
     });
   });
+
+  test("draft and pilot rows never change status or starred across histories", () => {
+    const noise = [
+      row({ id: 101, action: "automated_draft" }),
+      row({ id: 102, action: "automated_draft_cleared" }),
+      row({ id: 103, action: "automated_draft_done" }),
+      row({ id: 104, action: "pilot" }),
+      row({ id: 105, action: "pilot_cleared" }),
+    ];
+    const histories: VacancyActionRow[][] = [
+      [],
+      [row({ id: 1, action: "applied", appliedOn: "2026-10-01" })],
+      [row({ id: 1, action: "ignored", ignoreReason: "interest" })],
+      [
+        row({ id: 1, action: "applied", appliedOn: "2026-10-01" }),
+        row({ id: 2, action: "success", outcomeOn: "2026-10-05" }),
+      ],
+      [
+        row({ id: 1, action: "applied", appliedOn: "2026-10-01" }),
+        row({ id: 2, action: "rejected", outcomeOn: "2026-10-05" }),
+      ],
+      [row({ id: 1, action: "starred" })],
+    ];
+    for (const history of histories) {
+      const mixed = [...history, ...noise];
+      expect(deriveVacancyStatus(mixed)).toEqual(deriveVacancyStatus(history));
+      expect(deriveStarred(mixed)).toBe(deriveStarred(history));
+    }
+  });
 });
 
 describe("deriveStarred", () => {
@@ -182,5 +218,78 @@ describe("deriveStarred", () => {
       appliedOn: "2026-10-01",
       outcomeOn: "2026-10-05",
     });
+  });
+});
+
+describe("deriveAutoDraft", () => {
+  test("false with no rows, true when latest family row is automated_draft", () => {
+    expect(deriveAutoDraft([])).toBe(false);
+    expect(deriveAutoDraft([row({ id: 1, action: "automated_draft" })])).toBe(true);
+  });
+
+  test("cleared then re-marked sequences follow the latest row", () => {
+    const cleared = [row({ id: 1, action: "automated_draft" }), row({ id: 2, action: "automated_draft_cleared" })];
+    expect(deriveAutoDraft(cleared)).toBe(false);
+    expect(deriveAutoDraft([...cleared, row({ id: 3, action: "automated_draft" })])).toBe(true);
+  });
+
+  test("ignores automated_draft_done and unrelated rows", () => {
+    const rows = [row({ id: 1, action: "automated_draft" }), row({ id: 2, action: "automated_draft_done" }), row({ id: 3, action: "starred" })];
+    expect(deriveAutoDraft(rows)).toBe(true);
+  });
+});
+
+describe("derivePilot", () => {
+  test("follows the latest pilot/pilot_cleared row", () => {
+    expect(derivePilot([])).toBe(false);
+    const rows = [row({ id: 1, action: "pilot" }), row({ id: 2, action: "pilot_cleared" })];
+    expect(derivePilot(rows)).toBe(false);
+    expect(derivePilot([...rows, row({ id: 3, action: "pilot" })])).toBe(true);
+  });
+});
+
+describe("deriveDrafted", () => {
+  test("true when any automated_draft_done row exists", () => {
+    expect(deriveDrafted([])).toBe(false);
+    expect(deriveDrafted([row({ id: 1, action: "automated_draft" })])).toBe(false);
+    expect(deriveDrafted([row({ id: 1, action: "automated_draft_done" }), row({ id: 2, action: "automated_draft_cleared" })])).toBe(true);
+  });
+});
+
+describe("deriveInQueue", () => {
+  test("marked, not drafted, not applied is queued", () => {
+    expect(deriveInQueue([row({ id: 1, action: "automated_draft" })])).toBe(true);
+  });
+
+  test("cleared is not queued; re-marked is queued", () => {
+    const rows = [row({ id: 1, action: "automated_draft" }), row({ id: 2, action: "automated_draft_cleared" })];
+    expect(deriveInQueue(rows)).toBe(false);
+    expect(deriveInQueue([...rows, row({ id: 3, action: "automated_draft" })])).toBe(true);
+  });
+
+  test("a done row before the latest automated_draft excludes the vacancy", () => {
+    const rows = [row({ id: 1, action: "automated_draft_done" }), row({ id: 2, action: "automated_draft" })];
+    expect(deriveInQueue(rows)).toBe(false);
+  });
+
+  test("a done row after the latest automated_draft excludes the vacancy", () => {
+    const rows = [row({ id: 1, action: "automated_draft" }), row({ id: 2, action: "automated_draft_done" })];
+    expect(deriveInQueue(rows)).toBe(false);
+  });
+
+  test("applied vacancy is excluded", () => {
+    const rows = [row({ id: 1, action: "automated_draft" }), row({ id: 2, action: "applied", appliedOn: "2026-10-05" })];
+    expect(deriveInQueue(rows)).toBe(false);
+  });
+
+  test("success, rejected, ignored and reset-to-todo vacancies stay queued", () => {
+    const applied = row({ id: 2, action: "applied", appliedOn: "2026-10-05" });
+    const draft = row({ id: 1, action: "automated_draft" });
+    expect(deriveInQueue([draft, applied, row({ id: 3, action: "success", outcomeOn: "2026-10-06" })])).toBe(true);
+    expect(
+      deriveInQueue([draft, applied, row({ id: 3, action: "success", outcomeOn: "2026-10-06" }), row({ id: 4, action: "rejected", outcomeOn: "2026-10-07" })])
+    ).toBe(true);
+    expect(deriveInQueue([draft, row({ id: 2, action: "ignored" })])).toBe(true);
+    expect(deriveInQueue([draft, applied, row({ id: 3, action: "reset" })])).toBe(true);
   });
 });

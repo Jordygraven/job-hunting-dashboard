@@ -9,6 +9,27 @@ afterEach(() => {
 });
 
 describe("VacancyFilterBar", () => {
+  test.each([true, false])("Pilot only checkbox reflects pilot=%s", (pilot) => {
+    render(
+      <VacancyFilterBar
+        view="todo"
+        reasonFilter={null}
+        q={null}
+        company={null}
+        from={null}
+        to={null}
+        status={null}
+        pilot={pilot}
+        companies={[]}
+        hasActiveFilters={pilot}
+      />
+    );
+    const box = screen.getByLabelText("Pilot only");
+    expect(box).toHaveAttribute("name", "pilot");
+    expect(box).toHaveAttribute("value", "1");
+    expect((box as HTMLInputElement).checked).toBe(pilot);
+  });
+
   test("is a plain GET form to /", () => {
     render(
       <VacancyFilterBar

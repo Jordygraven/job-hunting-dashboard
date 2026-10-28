@@ -6,6 +6,7 @@ import { buildVacancyHref, type VacancyHrefParams } from "@/lib/vacancyActions/v
 import { columnLabel, COLUMNS_BY_VIEW, nextSortState, type SortableColumnKey } from "@/lib/vacancyActions/vacancySort";
 import { VacancyActions } from "./VacancyActions";
 import { StarToggle } from "./StarToggle";
+import { AutoDraftToggle, PilotToggle } from "./AutomationToggle";
 
 const EMPTY_STATE_TEXT: Record<VacancyTabView, string> = {
   todo: "No vacancies to triage.",
@@ -15,6 +16,7 @@ const EMPTY_STATE_TEXT: Record<VacancyTabView, string> = {
   success: "No successful vacancies yet.",
   rejected: "No rejected vacancies yet.",
   ignored: "No ignored vacancies yet.",
+  autodraft: "Nothing queued for auto-draft.",
 };
 
 const STATUS_PILL_CLASS: Record<VacancyTabRow["status"], string> = {
@@ -137,6 +139,7 @@ export function VacancyTable({
   company,
   from,
   to,
+  pilot,
   sort,
   dir,
 }: VacancyHrefParams & {
@@ -161,7 +164,7 @@ export function VacancyTable({
     return <p className="text-text-secondary">{EMPTY_STATE_TEXT[view]}</p>;
   }
 
-  const hrefParams: VacancyHrefParams = { view, reasonFilter, status, show, q, company, from, to };
+  const hrefParams: VacancyHrefParams = { view, reasonFilter, status, show, q, company, from, to, pilot };
   const activeSort = sort ?? null;
   const activeDir = dir ?? null;
   const columns = COLUMNS_BY_VIEW[view];
@@ -179,6 +182,25 @@ export function VacancyTable({
           <tr className="border-b border-border-subtle text-xs">
             <th scope="col" className={`py-2 pr-3 font-medium whitespace-nowrap text-text-secondary ${SHRINK_TO_CONTENT}`}>
               Star
+            </th>
+            <th
+              scope="col"
+              aria-label="Auto-draft"
+              title="Auto-draft"
+              className={`py-2 pr-3 font-medium whitespace-nowrap text-text-secondary ${SHRINK_TO_CONTENT}`}
+            >
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 16 16"
+                width="14"
+                height="14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.3"
+                strokeLinejoin="round"
+              >
+                <path d="M9 1.5L3 9h4l-1 5.5L13 7H9l0-5.5z" />
+              </svg>
             </th>
             {columns.includes("title") && header("title")}
             {columns.includes("company") && header("company")}
@@ -210,17 +232,35 @@ export function VacancyTable({
         <tbody>
           {rows.map((row) => {
             const starInteractive = view === "interest" || row.status === "todo";
+            // Drafted tint replaces the row background so it wins over the starred one.
+            const rowBg =
+              row.drafted && row.status !== "applied"
+                ? "bg-status-success-bg"
+                : row.starred
+                  ? "bg-surface-row-starred"
+                  : "bg-surface-row";
             return (
-              <tr
-                key={row.id}
-                className={`rounded-md transition-colors hover:bg-surface-row-hover ${
-                  row.starred ? "bg-surface-row-starred" : "bg-surface-row"
-                }`}
-              >
+              <tr key={row.id} className={`rounded-md transition-colors hover:bg-surface-row-hover ${rowBg}`}>
                 <td className={`rounded-l-md py-3 pr-3 pl-3 ${SHRINK_TO_CONTENT}`}>
                   <StarToggle vacancyId={row.id} starred={row.starred} interactive={starInteractive} />
                 </td>
-                <td className={`py-3 pr-3 text-text-primary ${WRAP_ALLOWED_MIN_WIDTH.title}`}>{row.title}</td>
+                <td className={`py-3 pr-3 ${SHRINK_TO_CONTENT}`}>
+                  <AutoDraftToggle vacancyId={row.id} marked={row.autoDraft} drafted={row.drafted} />
+                </td>
+                <td className={`py-3 pr-3 text-text-primary ${WRAP_ALLOWED_MIN_WIDTH.title}`}>{row.title}
+                  {row.pilot && (
+                    <>
+                      {" "}
+                      <Pill className="bg-tag-bg text-tag-fg">Pilot</Pill>
+                    </>
+                  )}
+                  {row.drafted && (
+                    <>
+                      {" "}
+                      <Pill className="bg-tag-bg text-tag-fg">Drafted</Pill>
+                    </>
+                  )}
+                </td>
                 <td
                   className={`py-3 pr-3 text-text-secondary ${WRAP_ALLOWED_MIN_WIDTH.company} ${SHRINK_TO_CONTENT}`}
                 >
@@ -267,12 +307,15 @@ export function VacancyTable({
                   </td>
                 )}
                 <td className={`rounded-r-md py-3 pr-3 whitespace-nowrap ${SHRINK_TO_CONTENT}`}>
-                  <VacancyActions
-                    vacancyId={row.id}
-                    status={row.status}
-                    appliedOn={row.appliedOn}
-                    outcomeOn={row.outcomeOn}
-                  />
+                  <div className="flex items-start gap-2">
+                    <VacancyActions
+                      vacancyId={row.id}
+                      status={row.status}
+                      appliedOn={row.appliedOn}
+                      outcomeOn={row.outcomeOn}
+                    />
+                    <PilotToggle vacancyId={row.id} marked={row.pilot} />
+                  </div>
                 </td>
               </tr>
             );

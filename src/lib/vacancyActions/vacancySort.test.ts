@@ -22,6 +22,10 @@ function row(overrides: Partial<VacancyTabRow> = {}): VacancyTabRow {
     ignoredOn: null,
     ignoreReason: null,
     starred: false,
+    autoDraft: false,
+    pilot: false,
+    drafted: false,
+    queued: false,
     ...overrides,
   };
 }
@@ -62,6 +66,7 @@ describe("COLUMNS_BY_VIEW", () => {
       "ignoreReason",
     ]);
     expect(COLUMNS_BY_VIEW.all).toEqual(["title", "company", "location", "firstSeenAt", "status"]);
+    expect(COLUMNS_BY_VIEW.autodraft).toEqual(["title", "company", "location", "firstSeenAt", "status"]);
   });
 
   test("outcomeOn is not sortable on all (or anywhere outside Success/Rejected)", () => {

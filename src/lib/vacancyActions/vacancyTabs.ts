@@ -2,7 +2,7 @@ import { IGNORE_REASONS } from "./validation";
 import type { Vacancy } from "@/lib/vacancies/getVacancies";
 import type { IgnoreReason, VacancyStatus } from "./types";
 
-export type VacancyTabView = "todo" | "interest" | "applied" | "all" | "success" | "rejected" | "ignored";
+export type VacancyTabView = "todo" | "interest" | "applied" | "all" | "success" | "rejected" | "ignored" | "autodraft";
 
 export type VacancyTabRow = {
   id: number;
@@ -17,6 +17,10 @@ export type VacancyTabRow = {
   ignoredOn: string | null;
   ignoreReason: IgnoreReason | null;
   starred: boolean;
+  autoDraft: boolean;
+  pilot: boolean;
+  drafted: boolean;
+  queued: boolean;
 };
 
 export type VacancyTabCounts = {
@@ -27,9 +31,10 @@ export type VacancyTabCounts = {
   ignored: number;
   all: number;
   interest: number;
+  autodraft: number;
 };
 
-const VIEWS: readonly VacancyTabView[] = ["todo", "interest", "applied", "all", "success", "rejected", "ignored"];
+const VIEWS: readonly VacancyTabView[] = ["todo", "interest", "applied", "all", "success", "rejected", "ignored", "autodraft"];
 const REASON_FILTERS: readonly string[] = [...IGNORE_REASONS, "none"];
 
 export function firstOf(value: string | string[] | undefined): string | undefined {
@@ -86,7 +91,12 @@ export const STATUS_LABELS: Record<VacancyTabRow["status"], string> = {
   ignored: "Ignored",
 };
 
-export function buildVacancyTabRow(vacancy: Vacancy, status: VacancyStatus, starred: boolean): VacancyTabRow {
+export function buildVacancyTabRow(
+  vacancy: Vacancy,
+  status: VacancyStatus,
+  starred: boolean,
+  automation: Pick<VacancyTabRow, "autoDraft" | "pilot" | "drafted" | "queued">
+): VacancyTabRow {
   const appliedOn =
     status.status === "applied" || status.status === "success" || status.status === "rejected"
       ? status.appliedOn
@@ -106,6 +116,7 @@ export function buildVacancyTabRow(vacancy: Vacancy, status: VacancyStatus, star
     ignoredOn: status.status === "ignored" ? status.date : null,
     ignoreReason: status.status === "ignored" ? status.reason : null,
     starred,
+    ...automation,
   };
 }
 
@@ -119,7 +130,9 @@ export function selectRowsForView(
       ? rows
       : view === "interest"
         ? rows.filter((row) => row.starred)
-        : rows.filter((row) => row.status === view);
+        : view === "autodraft"
+          ? rows.filter((row) => row.queued)
+          : rows.filter((row) => row.status === view);
   if (view !== "ignored" || reasonFilter === null) {
     return byView;
   }
@@ -135,6 +148,7 @@ export function countByView(rows: VacancyTabRow[]): VacancyTabCounts {
   const rejected = rows.filter((row) => row.status === "rejected").length;
   const ignored = rows.filter((row) => row.status === "ignored").length;
   const interest = rows.filter((row) => row.starred).length;
+  const autodraft = rows.filter((row) => row.queued).length;
 
   return {
     todo,
@@ -144,7 +158,12 @@ export function countByView(rows: VacancyTabRow[]): VacancyTabCounts {
     ignored,
     all: todo + applied + success + rejected + ignored,
     interest,
+    autodraft,
   };
+}
+
+export function resolvePilotFilter(value: string | string[] | undefined): boolean {
+  return firstOf(value) === "1";
 }
 
 export type ShowParam = 10 | 20 | "all";

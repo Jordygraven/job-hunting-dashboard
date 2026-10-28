@@ -4,6 +4,7 @@ import {
   countByView,
   describeShownRows,
   resolveReasonFilter,
+  resolvePilotFilter,
   resolveShow,
   resolveStatusFilter,
   resolveView,
@@ -26,6 +27,8 @@ function vacancy(overrides: Partial<Vacancy> = {}): Vacancy {
   };
 }
 
+const NO_AUTOMATION = { autoDraft: false, pilot: false, drafted: false, queued: false };
+
 function tabRow(overrides: Partial<VacancyTabRow> = {}): VacancyTabRow {
   return {
     id: 1,
@@ -40,6 +43,10 @@ function tabRow(overrides: Partial<VacancyTabRow> = {}): VacancyTabRow {
     ignoredOn: null,
     ignoreReason: null,
     starred: false,
+    autoDraft: false,
+    pilot: false,
+    drafted: false,
+    queued: false,
     ...overrides,
   };
 }
@@ -57,6 +64,7 @@ describe("resolveView", () => {
     expect(resolveView("success")).toBe("success");
     expect(resolveView("rejected")).toBe("rejected");
     expect(resolveView("ignored")).toBe("ignored");
+    expect(resolveView("autodraft")).toBe("autodraft");
   });
 
   test("falls back to todo for an unknown value", () => {
@@ -120,34 +128,34 @@ describe("resolveStatusFilter", () => {
 describe("buildVacancyTabRow", () => {
   test("todo status carries no date/reason, starred passed through", () => {
     const status: VacancyStatus = { status: "todo" };
-    expect(buildVacancyTabRow(vacancy(), status, false)).toEqual(tabRow({ status: "todo", starred: false }));
-    expect(buildVacancyTabRow(vacancy(), status, true)).toEqual(tabRow({ status: "todo", starred: true }));
+    expect(buildVacancyTabRow(vacancy(), status, false, NO_AUTOMATION)).toEqual(tabRow({ status: "todo", starred: false }));
+    expect(buildVacancyTabRow(vacancy(), status, true, NO_AUTOMATION)).toEqual(tabRow({ status: "todo", starred: true }));
   });
 
   test("applied status carries appliedOn, no outcomeOn/ignoredOn/reason", () => {
     const status: VacancyStatus = { status: "applied", appliedOn: "2026-10-02" };
-    expect(buildVacancyTabRow(vacancy(), status, false)).toEqual(
+    expect(buildVacancyTabRow(vacancy(), status, false, NO_AUTOMATION)).toEqual(
       tabRow({ status: "applied", appliedOn: "2026-10-02" })
     );
   });
 
   test("ignored status carries ignoredOn and reason (possibly null)", () => {
     const status: VacancyStatus = { status: "ignored", reason: "interest", date: "2026-10-03" };
-    expect(buildVacancyTabRow(vacancy(), status, false)).toEqual(
+    expect(buildVacancyTabRow(vacancy(), status, false, NO_AUTOMATION)).toEqual(
       tabRow({ status: "ignored", ignoredOn: "2026-10-03", ignoreReason: "interest" })
     );
   });
 
   test("success status carries both appliedOn and outcomeOn", () => {
     const status: VacancyStatus = { status: "success", appliedOn: "2026-10-01", outcomeOn: "2026-10-05" };
-    expect(buildVacancyTabRow(vacancy(), status, false)).toEqual(
+    expect(buildVacancyTabRow(vacancy(), status, false, NO_AUTOMATION)).toEqual(
       tabRow({ status: "success", appliedOn: "2026-10-01", outcomeOn: "2026-10-05" })
     );
   });
 
   test("rejected status carries both appliedOn and outcomeOn", () => {
     const status: VacancyStatus = { status: "rejected", appliedOn: "2026-10-01", outcomeOn: "2026-10-08" };
-    expect(buildVacancyTabRow(vacancy(), status, true)).toEqual(
+    expect(buildVacancyTabRow(vacancy(), status, true, NO_AUTOMATION)).toEqual(
       tabRow({ status: "rejected", appliedOn: "2026-10-01", outcomeOn: "2026-10-08", starred: true })
     );
   });
@@ -177,6 +185,16 @@ describe("selectRowsForView", () => {
 
   test("interest returns only starred rows, ignoring status entirely", () => {
     expect(selectRowsForView(rows, "interest", null).map((r) => r.id)).toEqual([1, 2]);
+  });
+
+  test("autodraft returns only queued rows, across every status", () => {
+    const queue = [
+      tabRow({ id: 1, status: "todo", queued: true }),
+      tabRow({ id: 2, status: "ignored", queued: true }),
+      tabRow({ id: 3, status: "todo", autoDraft: true, queued: false }),
+      tabRow({ id: 4, status: "todo", autoDraft: true, drafted: true, queued: false }),
+    ];
+    expect(selectRowsForView(queue, "autodraft", null).map((r) => r.id)).toEqual([1, 2]);
   });
 
   test("a reason filter on the ignored tab narrows further", () => {
@@ -210,6 +228,7 @@ describe("countByView", () => {
       ignored: 1,
       all: 6,
       interest: 0,
+      autodraft: 0,
     });
   });
 
@@ -225,6 +244,17 @@ describe("countByView", () => {
     expect(counts.todo + counts.applied + counts.success + counts.rejected + counts.ignored).toBe(counts.all);
   });
 
+  test("autodraft counts queued rows across every status and is not folded into all", () => {
+    const rows = [
+      tabRow({ id: 1, status: "todo", queued: true }),
+      tabRow({ id: 2, status: "ignored", queued: true }),
+      tabRow({ id: 3, status: "todo", autoDraft: true, drafted: true }),
+    ];
+    const counts = countByView(rows);
+    expect(counts.autodraft).toBe(2);
+    expect(counts.all).toBe(3);
+  });
+
   test("all-zero counts for an empty vacancy list", () => {
     expect(countByView([])).toEqual({
       todo: 0,
@@ -234,7 +264,18 @@ describe("countByView", () => {
       ignored: 0,
       all: 0,
       interest: 0,
+      autodraft: 0,
     });
+  });
+});
+
+describe("resolvePilotFilter", () => {
+  test("is true only for pilot=1", () => {
+    expect(resolvePilotFilter("1")).toBe(true);
+    expect(resolvePilotFilter(["1", "0"])).toBe(true);
+    expect(resolvePilotFilter(undefined)).toBe(false);
+    expect(resolvePilotFilter("0")).toBe(false);
+    expect(resolvePilotFilter("true")).toBe(false);
   });
 });
 

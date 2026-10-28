@@ -1,5 +1,5 @@
 import { getKlDateString } from "@/lib/format/kualaLumpurDate";
-import { STAR_ACTIONS, STATUS_ACTIONS } from "./types";
+import { PILOT_ACTIONS, STAR_ACTIONS, STATUS_ACTIONS } from "./types";
 import type { VacancyActionRow, VacancyStatus } from "./types";
 
 function latestById(rows: VacancyActionRow[]): VacancyActionRow {
@@ -64,4 +64,26 @@ export function deriveStarred(rows: VacancyActionRow[]): boolean {
   }
 
   return latestById(starRows).action === "starred";
+}
+
+function latestIsAction(rows: VacancyActionRow[], family: readonly string[], action: string): boolean {
+  const familyRows = rows.filter((row) => family.includes(row.action));
+  return familyRows.length > 0 && latestById(familyRows).action === action;
+}
+
+export function deriveAutoDraft(rows: VacancyActionRow[]): boolean {
+  return latestIsAction(rows, ["automated_draft", "automated_draft_cleared"], "automated_draft");
+}
+
+export function derivePilot(rows: VacancyActionRow[]): boolean {
+  return latestIsAction(rows, PILOT_ACTIONS, "pilot");
+}
+
+export function deriveDrafted(rows: VacancyActionRow[]): boolean {
+  return rows.some((row) => row.action === "automated_draft_done");
+}
+
+// A drafted vacancy never returns to the queue, even after a later automated_draft row.
+export function deriveInQueue(rows: VacancyActionRow[]): boolean {
+  return deriveAutoDraft(rows) && !deriveDrafted(rows) && deriveVacancyStatus(rows).status !== "applied";
 }

@@ -23,15 +23,15 @@ const VACANCIES = [
   { id: 3, title: "C", company: "Co C", location: "Penang", url: "https://x/3", firstSeenAt: "2026-10-01T00:00:00.000Z" },
 ];
 
-const EMPTY_COUNTS = { todo: 0, applied: 0, success: 0, rejected: 0, ignored: 0, all: 0, interest: 0 };
+const EMPTY_COUNTS = { todo: 0, applied: 0, success: 0, rejected: 0, ignored: 0, all: 0, interest: 0, autodraft: 0 };
 
 describe("getVacancyTabData", () => {
   test("combines vacancies with statuses, defaults to the todo tab, keeps newest-first order", async () => {
     getVacanciesMock.mockResolvedValue(VACANCIES);
     getVacancyFlagsMock.mockResolvedValue(
       new Map([
-        [2, { status: { status: "applied", appliedOn: "2026-10-02" }, starred: false }],
-        [3, { status: { status: "ignored", reason: "other", date: "2026-10-01" }, starred: false }],
+        [2, { status: { status: "applied", appliedOn: "2026-10-02" }, starred: false, autoDraft: false, pilot: false, drafted: false }],
+        [3, { status: { status: "ignored", reason: "other", date: "2026-10-01" }, starred: false, autoDraft: false, pilot: false, drafted: false }],
       ])
     );
 
@@ -41,6 +41,40 @@ describe("getVacancyTabData", () => {
     expect(result.reasonFilter).toBeNull();
     expect(result.counts).toEqual({ ...EMPTY_COUNTS, todo: 1, applied: 1, ignored: 1, all: 3 });
     expect(result.rows.map((r) => r.id)).toEqual([1]);
+  });
+
+  test("pilot=1 keeps only pilot rows, flags hasActiveFilters, leaves tab counts unchanged", async () => {
+    getVacanciesMock.mockResolvedValue(VACANCIES);
+    getVacancyFlagsMock.mockResolvedValue(
+      new Map([[2, { status: { status: "todo" }, starred: false, autoDraft: false, pilot: true, drafted: false }]])
+    );
+
+    const plain = await getVacancyTabData({});
+    const result = await getVacancyTabData({ pilot: "1" });
+
+    expect(result.rows.map((r) => r.id)).toEqual([2]);
+    expect(result.filteredCount).toBe(1);
+    expect(result.pilot).toBe(true);
+    expect(result.hasActiveFilters).toBe(true);
+    expect(result.counts).toEqual(plain.counts);
+    expect(plain.pilot).toBe(false);
+    expect(plain.hasActiveFilters).toBe(false);
+  });
+
+  test("passes autoDraft, pilot and drafted flags through to the row", async () => {
+    getVacanciesMock.mockResolvedValue(VACANCIES);
+    getVacancyFlagsMock.mockResolvedValue(
+      new Map([[1, { status: { status: "todo" }, starred: false, autoDraft: true, pilot: true, drafted: true }]])
+    );
+
+    const result = await getVacancyTabData({});
+
+    expect(result.rows.find((r) => r.id === 1)).toMatchObject({
+      status: "todo",
+      autoDraft: true,
+      pilot: true,
+      drafted: true,
+    });
   });
 
   test("a vacancy with no status row at all is todo", async () => {
@@ -56,8 +90,8 @@ describe("getVacancyTabData", () => {
     getVacanciesMock.mockResolvedValue(VACANCIES);
     getVacancyFlagsMock.mockResolvedValue(
       new Map([
-        [2, { status: { status: "ignored", reason: "language", date: "2026-10-02" }, starred: false }],
-        [3, { status: { status: "ignored", reason: "other", date: "2026-10-01" }, starred: false }],
+        [2, { status: { status: "ignored", reason: "language", date: "2026-10-02" }, starred: false, autoDraft: false, pilot: false, drafted: false }],
+        [3, { status: { status: "ignored", reason: "other", date: "2026-10-01" }, starred: false, autoDraft: false, pilot: false, drafted: false }],
       ])
     );
 
@@ -119,8 +153,8 @@ describe("getVacancyTabData", () => {
     getVacanciesMock.mockResolvedValue(VACANCIES);
     getVacancyFlagsMock.mockResolvedValue(
       new Map([
-        [2, { status: { status: "ignored", reason: "language", date: "2026-10-02" }, starred: false }],
-        [3, { status: { status: "ignored", reason: "other", date: "2026-10-01" }, starred: false }],
+        [2, { status: { status: "ignored", reason: "language", date: "2026-10-02" }, starred: false, autoDraft: false, pilot: false, drafted: false }],
+        [3, { status: { status: "ignored", reason: "other", date: "2026-10-01" }, starred: false, autoDraft: false, pilot: false, drafted: false }],
       ])
     );
 
@@ -167,8 +201,8 @@ describe("getVacancyTabData", () => {
     getVacanciesMock.mockResolvedValue(VACANCIES);
     getVacancyFlagsMock.mockResolvedValue(
       new Map([
-        [2, { status: { status: "ignored", reason: "language", date: "2026-10-02" }, starred: false }],
-        [3, { status: { status: "applied", appliedOn: "2026-10-01" }, starred: true }],
+        [2, { status: { status: "ignored", reason: "language", date: "2026-10-02" }, starred: false, autoDraft: false, pilot: false, drafted: false }],
+        [3, { status: { status: "applied", appliedOn: "2026-10-01" }, starred: true, autoDraft: false, pilot: false, drafted: false }],
       ])
     );
 
@@ -183,7 +217,7 @@ describe("getVacancyTabData", () => {
   test("status narrows rows on the all and interest tabs; it's a no-op elsewhere", async () => {
     getVacanciesMock.mockResolvedValue(VACANCIES);
     getVacancyFlagsMock.mockResolvedValue(
-      new Map([[2, { status: { status: "applied", appliedOn: "2026-10-02" }, starred: true }]])
+      new Map([[2, { status: { status: "applied", appliedOn: "2026-10-02" }, starred: true, autoDraft: false, pilot: false, drafted: false }]])
     );
 
     const onAll = await getVacancyTabData({ view: "all", status: "applied" });
@@ -203,9 +237,9 @@ describe("getVacancyTabData", () => {
     getVacanciesMock.mockResolvedValue(VACANCIES);
     getVacancyFlagsMock.mockResolvedValue(
       new Map([
-        [1, { status: { status: "todo" }, starred: true }],
-        [2, { status: { status: "applied", appliedOn: "2026-10-01" }, starred: true }],
-        [3, { status: { status: "ignored", reason: "other", date: "2026-10-01" }, starred: false }],
+        [1, { status: { status: "todo" }, starred: true, autoDraft: false, pilot: false, drafted: false }],
+        [2, { status: { status: "applied", appliedOn: "2026-10-01" }, starred: true, autoDraft: false, pilot: false, drafted: false }],
+        [3, { status: { status: "ignored", reason: "other", date: "2026-10-01" }, starred: false, autoDraft: false, pilot: false, drafted: false }],
       ])
     );
 
@@ -219,8 +253,8 @@ describe("getVacancyTabData", () => {
     getVacanciesMock.mockResolvedValue(VACANCIES);
     getVacancyFlagsMock.mockResolvedValue(
       new Map([
-        [1, { status: { status: "success", appliedOn: "2026-10-01", outcomeOn: "2026-10-05" }, starred: false }],
-        [2, { status: { status: "rejected", appliedOn: "2026-10-01", outcomeOn: "2026-10-06" }, starred: false }],
+        [1, { status: { status: "success", appliedOn: "2026-10-01", outcomeOn: "2026-10-05" }, starred: false, autoDraft: false, pilot: false, drafted: false }],
+        [2, { status: { status: "rejected", appliedOn: "2026-10-01", outcomeOn: "2026-10-06" }, starred: false, autoDraft: false, pilot: false, drafted: false }],
       ])
     );
 
@@ -235,8 +269,8 @@ describe("getVacancyTabData", () => {
     getVacanciesMock.mockResolvedValue(VACANCIES);
     getVacancyFlagsMock.mockResolvedValue(
       new Map([
-        [1, { status: { status: "success", appliedOn: "2026-10-01", outcomeOn: "2026-10-05" }, starred: true }],
-        [2, { status: { status: "success", appliedOn: "2026-10-01", outcomeOn: "2026-10-05" }, starred: true }],
+        [1, { status: { status: "success", appliedOn: "2026-10-01", outcomeOn: "2026-10-05" }, starred: true, autoDraft: false, pilot: false, drafted: false }],
+        [2, { status: { status: "success", appliedOn: "2026-10-01", outcomeOn: "2026-10-05" }, starred: true, autoDraft: false, pilot: false, drafted: false }],
       ])
     );
 
@@ -281,7 +315,7 @@ describe("getVacancyTabData", () => {
 
   test("with no sort param, a starred row floats to the top of the default order", async () => {
     getVacanciesMock.mockResolvedValue(VACANCIES);
-    getVacancyFlagsMock.mockResolvedValue(new Map([[3, { status: { status: "todo" }, starred: true }]]));
+    getVacancyFlagsMock.mockResolvedValue(new Map([[3, { status: { status: "todo" }, starred: true, autoDraft: false, pilot: false, drafted: false }]]));
 
     const result = await getVacancyTabData({ view: "all" });
 

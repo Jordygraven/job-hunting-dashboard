@@ -15,6 +15,7 @@ describe("buildVacancyHref", () => {
   test("omits reasonFilter when null or absent", () => {
     expect(buildVacancyHref({ view: "ignored", reasonFilter: null })).toBe("/?view=ignored");
     expect(buildVacancyHref({ view: "ignored" })).toBe("/?view=ignored");
+    expect(buildVacancyHref({ view: "autodraft" })).toBe("/?view=autodraft");
   });
 
   test("includes status only on the all/interest views, even if passed for another view", () => {
@@ -23,6 +24,11 @@ describe("buildVacancyHref", () => {
       "/?view=interest&status=applied"
     );
     expect(buildVacancyHref({ view: "todo", status: "applied" })).toBe("/?view=todo");
+  });
+
+  test("includes pilot=1 only when pilot is true", () => {
+    expect(buildVacancyHref({ view: "todo", pilot: true })).toBe("/?view=todo&pilot=1");
+    expect(buildVacancyHref({ view: "todo", pilot: false })).toBe("/?view=todo");
   });
 
   test("omits show at the default (10), includes it otherwise", () => {
