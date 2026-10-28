@@ -143,6 +143,35 @@ describe("deriveVacancyStatus", () => {
       outcomeOn: "2026-10-05",
     });
   });
+
+  test("draft and pilot rows never change status or starred across histories", () => {
+    const noise = [
+      row({ id: 101, action: "automated_draft" }),
+      row({ id: 102, action: "automated_draft_cleared" }),
+      row({ id: 103, action: "automated_draft_done" }),
+      row({ id: 104, action: "pilot" }),
+      row({ id: 105, action: "pilot_cleared" }),
+    ];
+    const histories: VacancyActionRow[][] = [
+      [],
+      [row({ id: 1, action: "applied", appliedOn: "2026-10-01" })],
+      [row({ id: 1, action: "ignored", ignoreReason: "interest" })],
+      [
+        row({ id: 1, action: "applied", appliedOn: "2026-10-01" }),
+        row({ id: 2, action: "success", outcomeOn: "2026-10-05" }),
+      ],
+      [
+        row({ id: 1, action: "applied", appliedOn: "2026-10-01" }),
+        row({ id: 2, action: "rejected", outcomeOn: "2026-10-05" }),
+      ],
+      [row({ id: 1, action: "starred" })],
+    ];
+    for (const history of histories) {
+      const mixed = [...history, ...noise];
+      expect(deriveVacancyStatus(mixed)).toEqual(deriveVacancyStatus(history));
+      expect(deriveStarred(mixed)).toBe(deriveStarred(history));
+    }
+  });
 });
 
 describe("deriveStarred", () => {
