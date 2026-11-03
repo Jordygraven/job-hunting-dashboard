@@ -15,20 +15,20 @@
   --border-subtle: #27272f;
   --border-control: #6e6e72;
   --border-control-hover: #86868a;
-  --border-accent-subtle: rgba(129, 140, 248, 0.7);
+  --border-accent-subtle: rgba(45, 212, 191, 0.7);
 
   --text-primary: #f4f7ff;
   --text-secondary: #a1a1ab;
   --text-muted: #86868f;
 
   --accent: #2dd4bf;
-  --accent-hover: #93a1fa;
+  --accent-hover: #14b8a6;
   --accent-foreground: #0a0f1e;
-  --accent-muted-bg: rgba(129, 140, 248, 0.14);
+  --accent-muted-bg: rgba(45, 212, 191, 0.14);
 
   --status-todo-bg: rgba(161, 161, 171, 0.14);
   --status-todo-fg: #c4c4cc;
-  --status-applied-bg: rgba(129, 140, 248, 0.16);
+  --status-applied-bg: rgba(45, 212, 191, 0.16);
   --status-applied-fg: #b4bcfb;
   --status-ignored-bg: rgba(161, 161, 171, 0.1);
   --status-ignored-fg: #9191a0;
@@ -39,7 +39,7 @@
   --status-warning-bg: rgba(251, 191, 36, 0.14);
   --status-warning-fg: #fde68a;
 
-  --surface-row-starred: rgba(129, 140, 248, 0.08);
+  --surface-row-starred: rgba(45, 212, 191, 0.08);
 
   --tag-bg: rgba(161, 161, 171, 0.14);
   --tag-fg: #c4c4cc;
