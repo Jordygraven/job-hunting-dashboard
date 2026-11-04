@@ -11,7 +11,7 @@ type ActionState =
   | { status: "ok"; result: SyncResult }
   | { status: "error"; message: string };
 
-async function syncAction(_prevState: ActionState): Promise<ActionState> {
+async function syncAction(): Promise<ActionState> {
   const response = await runManualSync();
   if (response.ok) {
     return { status: "ok", result: response.result };
