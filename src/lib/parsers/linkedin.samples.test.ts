@@ -8,7 +8,7 @@ const URL_RE = /^https:\/\/www\.linkedin\.com\/jobs\/view\/\d+\/$/;
 const SUBJECT_RE = /^Subject:\s*(.+?)\s+bij\s+(.+?)\s*$/;
 
 describe.skipIf(!existsSync(SAMPLES_DIR))('parseLinkedInAlert against real samples', () => {
-  const files = readdirSync(SAMPLES_DIR).filter((f) => f.endsWith('.txt'));
+  const files = existsSync(SAMPLES_DIR) ? readdirSync(SAMPLES_DIR).filter((f) => f.endsWith('.txt')) : [];
 
   test('samples/linkedin-clean/ exists and has files', () => {
     expect(files.length).toBeGreaterThan(0);
