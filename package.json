@@ -11,7 +11,7 @@
     "greenhouse:dry-run": "tsx scripts/greenhouseDryRun.ts"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.119.0",
+    "@supabase/supabase-js": "^2.119.1",
     "googleapis": "^189.0.0",
     "jordy-ui": "git+https://github.com/Jordygraven/jordy-design-system.git#v0.0.4",
     "next": "^16.4.6",
