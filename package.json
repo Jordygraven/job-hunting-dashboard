@@ -13,7 +13,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.119.0",
     "googleapis": "^189.0.0",
-    "jordy-ui": "github:Jordygraven/jordy-design-system#v0.0.4",
+    "jordy-ui": "git+https://github.com/Jordygraven/jordy-design-system.git#v0.0.4",
     "next": "^16.4.6",
     "react": "19.3.1",
     "react-dom": "19.3.1",
