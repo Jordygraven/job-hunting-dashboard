@@ -29,7 +29,7 @@ Branch `epic-12-board-registry`. Move Greenhouse boards from `src/config/greenho
 Every task commit passes `npm test`, typecheck and build on its own. The last step of each task: run the three and report the result. One concern per commit. Add files by name. Finish the epic with `/ponytail:ponytail-review` on the diff.
 
 ## Schema (the owner writes and runs the SQL; Claude creates no migrations)
-Task 4 writes this to `docs/sql/epic-12-board-registry.sql`. the owner runs it in the Supabase SQL editor before the code of Task 5 ships.
+Task 4 writes this to `docs/sql/epic-12-board-registry.sql`. The owner runs it in the Supabase SQL editor before the code of Task 5 ships.
 
 ```sql
 -- Epic 12: board registry. Run once, in order.
@@ -189,9 +189,9 @@ Files: delete `src/config/greenhouseBoards.ts`; `getSyncVacancies.test.ts`; `BAC
 
 ### 10. Go live (the owner, with Claude reading output only)
 Preview check: no (flag is Production only). Go-live is verified on Production.
-- Run `npm run greenhouse:dry-run` after Task 7 has written the candidates. the owner reads the output and says OK. Nothing below happens before that OK.
-- the owner runs `probe-output/boards-import.sql` in the Supabase SQL editor, then the check query and `select portal, count(*) from public.boards group by 1;`.
-- the owner marks any unwanted board `dead` with the by-hand statement above.
+- Run `npm run greenhouse:dry-run` after Task 7 has written the candidates. The owner reads the output and says OK. Nothing below happens before that OK.
+- The owner runs `probe-output/boards-import.sql` in the Supabase SQL editor, then the check query and `select portal, count(*) from public.boards group by 1;`.
+- The owner marks any unwanted board `dead` with the by-hand statement above.
 - Merge, then trigger a manual sync on Production. Confirm: the three seeded boards (no check row before) each got an `active` row; the rest got `active` rows; a second same-day sync adds another row per active board. Read the step times in the Production logs against the Task 1 decision rule. `GREENHOUSE_SYNC_ENABLED` stays Production only.
 
 ## Open items
