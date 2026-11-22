@@ -260,7 +260,7 @@ const PORTALS = {
     hosts: () => [""],
     url: (_host, slug) => `https://${slug}.breezy.hr/json`,
     dnsMissMeansNoBoard: true,
-    // Checked against a real reply (a live Breezy board on 15 Oct 2026).
+    // Checked against a real reply from a live Breezy board (15 Oct 2026).
     parse: (data) =>
       Array.isArray(data)
         ? {

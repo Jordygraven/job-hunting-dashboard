@@ -55,7 +55,7 @@ export default function PrivacyPage() {
       </p>
 
       <h2 className="text-lg font-semibold text-text-primary">Contact</h2>
-      <p>Contact: owner@example.com</p>
+      <p>Contact: open an issue on the project repository.</p>
 
       <p className="text-text-muted">Last updated: 2026-10-08</p>
     </main>
